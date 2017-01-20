@@ -1,0 +1,91 @@
+---
+title: "Normalization"
+author: "Kang sanghee"
+date: "January 20, 2017"
+output: html_document
+---
+
+# Quantile normalization
+
+```{r}
+
+
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+in.file <- "ForNormalization.txt"
+Start.col  <- 11 # The Numeric-array-data starts at this column
+dir     <- "C:/Users/SKang2/Desktop/RNAseq"
+doLog = "F" # transform to log2 values
+dirOut <- paste0(dir,"/output")
+#===================================================================
+
+
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+    install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+if (!("limma" %in% installed.packages()[,"Package"])) {
+  source("https://bioconductor.org/biocLite.R")
+  biocLite("limma")
+}
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr","readr","colorspace")
+instPak (packages) 
+library(limma)
+#-----------------------------
+
+in.file.name=unlist(strsplit(in.file,"\\.txt"))
+btwn_option = "quantile" # Options: "none"', '"scale"', '"quantile"','"Aquantile"', '"Gquantile"', '"Rquantile"', '"Tquantile"' or '"vsn"'
+out.fig.1 = paste(in.file.name, "_", "boxplot", ".jpg", sep="")
+out.fig.2 = paste(in.file.name, "_", "boxplot_",btwn_option, ".jpg", sep="")
+out.file =  paste(in.file.name,"_","profile_normlized.txt",sep="")
+out.p.log = paste(in.file.name,"_","process.log.txt",sep="")
+
+setwd(dir)
+
+# Input file Reading
+in.data = read_delim(in.file,delim ="\t",quote = "")
+in.data.edit <-data.frame(in.data[,(Start.col+1):ncol(in.data)])
+
+
+# Creat output data
+
+if(!file.exists(dirOut))
+  dir.create(dirOut)
+setwd(dirOut)
+
+# Normalization
+M.nor <- normalizeBetweenArrays(as.matrix(in.data.edit),method=btwn_option)
+
+# Writing the output table
+data.out <-cbind(in.data[,1:(Start.col-1)], round(M.nor,4))
+write_delim(x = data.out, path =file.path(dirOut,out.file), delim = "\t",na = "")
+
+# Option for Log 2 (option: "T", "F")
+if(doLog=="T")
+{
+  M.nor_log <- log2(M.nor)
+  data.out.log <-cbind(in.data[,1:(Start.col-1)], round(M.nor_log,4))
+  write_delim(x = data.out.log, path =file.path(dirOut,out.p.log), delim = "\t",na = "")
+  
+}
+
+# Boxplot for raw data
+jpeg(filename = out.fig.1, width = 4000, height = 480, pointsize = 14, quality = 30, bg = "white", res = NA)
+boxplot(in.data.edit, main=paste("Boxplot of ", in.file.name," Before Between normalization"))
+dev.off()
+
+
+# Boxplot for the data after Between-slide normalization
+jpeg(filename = out.fig.2, width = 4000, height = 480, pointsize = 14, quality = 20, bg = "white", res = NA)
+boxplot(data.frame(M.nor), main=paste("Boxplot of ", in.file, " after Between normalization", "_", btwn_option, sep=""))
+dev.off()
+
+```
+
