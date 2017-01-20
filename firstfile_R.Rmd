@@ -4,6 +4,10 @@ author: "Sanghee Kang"
 date: "2017년 1월 20일"
 output: html_document
 ---
+
+file type : sss
+
+![ddd](kk.png)
 ```{r}
 library(ggplot2)
 
