@@ -5,7 +5,7 @@ date: "January 20, 2017"
 output: html_document
 ---
 
-# The merged file is made by file_1 plus file_2 with the intersection of symbols.
+# The merged file is made by "file_1" plus "file_2" with the intersection of "Symbol".
 
 ```{r}
 
