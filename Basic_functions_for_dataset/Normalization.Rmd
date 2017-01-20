@@ -14,7 +14,7 @@ output: html_document
 # Properties: user input
 #-------------------------------------------------------------------
 in.file <- "ForNormalization.txt"
-Start.col  <- 11 # The Numeric-array-data starts at this column
+Start.col  <- 2 # The Numeric-array-data starts at this column
 dir     <- "C:/Users/SKang2/Desktop/RNAseq"
 doLog = "F" # transform to log2 values
 dirOut <- paste0(dir,"/output")
