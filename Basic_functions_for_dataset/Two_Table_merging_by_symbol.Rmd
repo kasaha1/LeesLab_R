@@ -1,0 +1,57 @@
+---
+title: "Two Table merging by symbol"
+author: "Kang sanghee"
+date: "January 20, 2017"
+output: html_document
+---
+
+# The merged file is made by file_1 plus file_2 with the intersection of symbols.
+
+```{r}
+
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+in.file_1 <- "Merging_1.txt" # The first column name is "Symbol" which gonna be the key for merging
+in.file_2 <- "Merging_2.txt" # The first column name is "Symbol" which gonna be the key for merging
+dir.in     <- "C:/Users/SKang2/Desktop/RNAseq"
+dir.Out <- paste0(dir.in,"/output_merging")
+#===================================================================
+
+
+
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+  install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","readr","colorspace")
+instPak (packages) 
+#-----------------------------
+
+
+# Data import
+raw.data_1 <- read_delim(file.path(dir.in,in.file_1),delim = "\t")
+raw.data_2 <- read_delim(file.path(dir.in,in.file_2),delim = "\t")
+
+# data processing
+
+res.table <- inner_join(raw.data_1, raw.data_2, by=c("Symbol"="Symbol"))
+knockOut.symbol_1 <- raw.data_1$Symbol[!(raw.data_1$Symbol %in% raw.data_2$Symbol)] %>% as.data.frame
+colnames(knockOut.symbol_1)[1] <- "excluded_symbols_of_file1"
+knockOut.symbol_2 <- raw.data_2$Symbol[!(raw.data_2$Symbol %in% raw.data_1$Symbol)] %>% as.data.frame
+colnames(knockOut.symbol_2)[1] <- "excluded_symbols_of_file2"
+# output
+if(!file.exists(dirOut))
+  dir.create(dirOut)
+
+
+write_delim(res.table,path = file.path(dir.Out,"merging_table.txt"),delim = "\t",na = "")
+write_delim(knockOut.symbol_1,path = file.path(dir.Out,"sup_file_1_excludedSymbols.txt"),delim = "\t",na = "")
+write_delim(knockOut.symbol_2,path = file.path(dir.Out,"sub_file_2_excludedSymbols.txt"),delim = "\t",na = "")
+```
+
