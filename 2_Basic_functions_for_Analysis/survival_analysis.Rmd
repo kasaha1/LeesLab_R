@@ -1,0 +1,76 @@
+---
+title: "survival analysis"
+author: "Kang sanghee"
+date: "January 20, 2017"
+output: html_document
+---
+
+```{r}
+
+
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+in.file <- "survival_colon.txt" 
+theVariable.Name.followUp <- "followup" # "followup": follow up period(day or month or year)
+theVariable.Name.death <- "death" # "death": Whether to die. Death is indicated by "1", Censor is indicated by "0"
+theVariable.strata <- "perfor" #"strata": The dividing criteria. If there is no criteria, "None" should be indicated.
+
+dir.in     <- "C:/Users/SKang2/Documents/Git_R/LeesLab_R/2_Basic_functions_for_Analysis/example_dataset"
+dir.Out <- paste0(dir.in,"/output_survival")
+#===================================================================
+
+
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+  install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","survival","survminer")
+instPak (packages) 
+#-----------------------------
+
+# import data
+raw.data.survivals <- read_delim(file.path(dir.in,in.file),delim = "\t")
+temp <- raw.data.survivals[,c(theVariable.Name.followUp,theVariable.Name.death)] %>% as.data.frame()
+colnames(temp)[1:2] <- c("temp_followup","temp_death")
+temp_raw.data.survivals <- cbind(raw.data.survivals,temp)
+
+if (theVariable.strata == "None") {
+  fit <- survfit(Surv(temp_followup,temp_death==1) ~ 1, data = temp_raw.data.survivals)
+  # survival rate #
+  # survivalRate <- summary(fit,times = 30) # 30--> periodes
+  # survivalRate <- as.character(survivalRate[1])
+  # survivalRate <- as.numeric(survivalRate[1])
+} else {
+  temp <- raw.data.survivals[,theVariable.strata] %>% as.data.frame()
+  colnames(temp)[1] <- c("temp_strata")
+  temp_raw.data.survivals.strata <- cbind(temp_raw.data.survivals,temp)
+  fit <- survfit(Surv(temp_followup,temp_death==1) ~ temp_strata, data = temp_raw.data.survivals.strata)
+  # survival rate #
+  # survivalRate <- summary(fit,times = 30) # 30--> periodes
+  # as.character(survivalRate[1])
+  # as.numeric(survivalRate[1])
+  # as.character(survivalRate[2])
+  # as.numeric(survivalRate[2])
+  
+  # p value #
+  # fit_differ <- survdiff(Surv(temp_followup,temp_death==1) ~ temp_strata, data = temp_raw.data.survivals.strata)
+  # p.val <- 1 - pchisq(fit_differ$chisq, length(fit_differ$n) - 1)
+
+}
+
+ggsurvplot(fit,conf.int = FALSE, pval = TRUE,legend.title = theVariable.strata)
+
+if(!file.exists(dir.Out)) {dir.create(dir.Out)}
+
+png(file.path(dir.Out,"survival_plot.png"),width = 700, height = 500,pointsize = 12, bg = "white")
+  ggsurvplot(fit,conf.int = FALSE, pval = TRUE,legend.title = theVariable.strata)
+dev.off()
+
+```
+

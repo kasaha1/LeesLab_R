@@ -46,8 +46,7 @@ colnames(knockOut.symbol_1)[1] <- "excluded_symbols_of_file1"
 knockOut.symbol_2 <- raw.data_2$Symbol[!(raw.data_2$Symbol %in% raw.data_1$Symbol)] %>% as.data.frame
 colnames(knockOut.symbol_2)[1] <- "excluded_symbols_of_file2"
 # output
-if(!file.exists(dirOut))
-  dir.create(dirOut)
+if(!file.exists(dirOut)) {dir.create(dirOut)}
 
 
 write_delim(res.table,path = file.path(dir.Out,"merging_table.txt"),delim = "\t",na = "")
