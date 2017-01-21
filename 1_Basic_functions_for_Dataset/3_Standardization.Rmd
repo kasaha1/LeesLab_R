@@ -1,0 +1,53 @@
+---
+title: "standardization"
+author: "Sanghee Kang"
+date: "2017년 1월 20일"
+output: html_document
+---
+
+# standardization: Subtracted the median and divided by the standard deviation.
+
+```{r}
+
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+in.file <- "standardization_example.txt" # The first column name is "Symbol" which gonna be the key for merging
+start.col <- 2 # the number of starting column for Numeric array data 
+dir.in <- "C:/Users/kangs/Documents/Git_R/LeesLab_R/1_Basic_functions_for_Dataset/example_dataset"
+dir.out <- paste0(dir.in,"/output_standardization")
+#===================================================================
+
+
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+  install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","readr","colorspace")
+instPak (packages) 
+#-----------------------------
+
+# import data
+raw.data <- read_delim(file.path(dir.in,in.file),delim = "\t")
+
+# processing
+num.raw.data <- raw.data[start.col:ncol(raw.data)] %>% as.matrix()
+median.table <- apply(num.raw.data,c(1),median,na.rm = T)
+res.table <- num.raw.data - median.table # median centering
+sd.table <- apply(res.table,1,sd,na.rm = T) 
+res.table_1 <- res.table/sd.table # divided by standard deviation
+result.table <- cbind(raw.data[1:(start.col-1)],res.table_1)
+
+# output
+if(!file.exists(dir.out)) {dir.create(dir.out)}
+
+in.file.name=unlist(strsplit(in.file,"\\.txt"))
+out.file =  paste(in.file.name,"_standardization",".txt",sep="")
+write_delim(x = result.table,path = file.path(dir.out,out.file),delim = "\t")
+```
+
