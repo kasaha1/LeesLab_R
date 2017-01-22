@@ -13,9 +13,9 @@ output: html_document
 # Properties: user input
 #-------------------------------------------------------------------
 print("Choose the file to be merged number 1")
-in.file_1 <- file.choose() # The first column name is "Symbol" which gonna be the key for merging
+in.file_1 <- file.choose() # The first column name,"Symbol", gonna be the key for merging
 print("Choose the file to be merged number 2")
-in.file_2 <- file.choose() # The first column name is "Symbol" which gonna be the key for merging
+in.file_2 <- file.choose() # The first column name,"Symbol", gonna be the key for merging
 dir.in     <- dirname(in.file)
 dir.Out <- paste0(dir.in,"/output_merging")
 #===================================================================
