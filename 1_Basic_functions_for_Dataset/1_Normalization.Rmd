@@ -9,15 +9,14 @@ output: html_document
 
 ```{r}
 
-
 #===================================================================
 # Properties: user input
 #-------------------------------------------------------------------
-in.file <- "ForNormalization.txt"
-Start.col  <- 2 # The Numeric-array-data starts at this column
-dir     <- "C:/Users/SKang2/Desktop/RNAseq"
-doLog = "F" # transform to log2 values
-dirOut <- paste0(dir,"/output")
+in.file <- file.choose()
+Start.col <- as.numeric(readline(prompt="Enter the numeric-data starting column (interger): "))  # The Numeric-array-data starts at this column
+dir     <- dirname(in.file)
+doLog  <-   readline(prompt="Transform the data to log2 values (T or F): ") # transform to log2 values
+dirOut <- paste0(dir,"/output_norm")
 #===================================================================
 
 
@@ -40,12 +39,11 @@ instPak (packages)
 library(limma)
 #-----------------------------
 
-in.file.name=unlist(strsplit(in.file,"\\.txt"))
+in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
 btwn_option = "quantile" # Options: "none"', '"scale"', '"quantile"','"Aquantile"', '"Gquantile"', '"Rquantile"', '"Tquantile"' or '"vsn"'
-out.fig.1 = paste(in.file.name, "_", "boxplot", ".jpg", sep="")
+out.fig.1 = paste(in.file.name, "_", "boxplot_preprocessing", ".jpg", sep="")
 out.fig.2 = paste(in.file.name, "_", "boxplot_",btwn_option, ".jpg", sep="")
 out.file =  paste(in.file.name,"_","profile_normlized.txt",sep="")
-out.p.log = paste(in.file.name,"_","process.log.txt",sep="")
 
 setwd(dir)
 

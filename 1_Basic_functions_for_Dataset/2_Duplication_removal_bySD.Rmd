@@ -15,9 +15,9 @@ output: html_document
 #===================================================================
 # Properties: user input
 #-------------------------------------------------------------------
-in.file <- "duplication_removal_bySD.txt" 
+in.file <- file.choose()
 
-dir.in <- "C:/Users/kangs/Documents/Git_R/LeesLab_R/1_Basic_functions_for_Dataset/example_dataset"
+dir.in <- dirname(in.file)
 dir.out <- paste0(dir.in,"/output_DPR_SD")
 #===================================================================
 
@@ -49,7 +49,7 @@ duplicateRemoverbySD <- function(x){
 }
 
 # import data
-raw.data <- read_delim(file.path(dir.in,in.file),delim = "\t")
+raw.data <- read_delim(in.file,delim = "\t")
 
 duplicate.list <- t(raw.data[,1])[duplicated(raw.data[,1])] %>% as.data.frame()
 colnames(duplicate.list) <- "List of removal"
@@ -58,7 +58,7 @@ res.table <- duplicateRemoverbySD(raw.data)
 # output
 if(!file.exists(dir.out)) {dir.create(dir.out)}
 
-in.file.name=unlist(strsplit(in.file,"\\.txt"))
+in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
 out.file =  paste(in.file.name,"_removed",".txt",sep="")
 out.file_1 =  paste(in.file.name,"_removed_list",".txt",sep="")
 write_delim(x = res.table,path = file.path(dir.out,out.file),delim = "\t")

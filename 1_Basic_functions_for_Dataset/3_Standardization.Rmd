@@ -12,9 +12,9 @@ output: html_document
 #===================================================================
 # Properties: user input
 #-------------------------------------------------------------------
-in.file <- "standardization_example.txt" # The first column name is "Symbol" which gonna be the key for merging
-start.col <- 2 # the number of starting column for Numeric array data 
-dir.in <- "C:/Users/kangs/Documents/Git_R/LeesLab_R/1_Basic_functions_for_Dataset/example_dataset"
+in.file <- file.choose() # The first column name is "Symbol" which gonna be the key for merging
+start.col <- as.numeric(readline(prompt="Enter the numeric-data starting column (interger): "))  # The Numeric-array-data starts at this column
+dir.in <- dirname(in.file)
 dir.out <- paste0(dir.in,"/output_standardization")
 #===================================================================
 
@@ -33,7 +33,7 @@ instPak (packages)
 #-----------------------------
 
 # import data
-raw.data <- read_delim(file.path(dir.in,in.file),delim = "\t")
+raw.data <- read_delim(in.file,delim = "\t")
 
 # processing
 num.raw.data <- raw.data[start.col:ncol(raw.data)] %>% as.matrix()
@@ -46,7 +46,7 @@ result.table <- cbind(raw.data[1:(start.col-1)],res.table_1)
 # output
 if(!file.exists(dir.out)) {dir.create(dir.out)}
 
-in.file.name=unlist(strsplit(in.file,"\\.txt"))
+in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
 out.file =  paste(in.file.name,"_standardization",".txt",sep="")
 write_delim(x = result.table,path = file.path(dir.out,out.file),delim = "\t")
 ```

@@ -5,16 +5,18 @@ date: "January 20, 2017"
 output: html_document
 ---
 
-# The merged file is made by "file_1" plus "file_2" with the intersection of "Symbol".
+# The two files to be merged must have a column named *"Symbol"*.
 
 ```{r}
 
 #===================================================================
 # Properties: user input
 #-------------------------------------------------------------------
-in.file_1 <- "Merging_1.txt" # The first column name is "Symbol" which gonna be the key for merging
-in.file_2 <- "Merging_2.txt" # The first column name is "Symbol" which gonna be the key for merging
-dir.in     <- "C:/Users/SKang2/Desktop/RNAseq"
+print("Choose the file to be merged number 1")
+in.file_1 <- file.choose() # The first column name is "Symbol" which gonna be the key for merging
+print("Choose the file to be merged number 2")
+in.file_2 <- file.choose() # The first column name is "Symbol" which gonna be the key for merging
+dir.in     <- dirname(in.file)
 dir.Out <- paste0(dir.in,"/output_merging")
 #===================================================================
 
@@ -35,8 +37,8 @@ instPak (packages)
 
 
 # Data import
-raw.data_1 <- read_delim(file.path(dir.in,in.file_1),delim = "\t")
-raw.data_2 <- read_delim(file.path(dir.in,in.file_2),delim = "\t")
+raw.data_1 <- read_delim(in.file_1,delim = "\t")
+raw.data_2 <- read_delim(in.file_2,delim = "\t")
 
 # data processing
 
@@ -46,11 +48,11 @@ colnames(knockOut.symbol_1)[1] <- "excluded_symbols_of_file1"
 knockOut.symbol_2 <- raw.data_2$Symbol[!(raw.data_2$Symbol %in% raw.data_1$Symbol)] %>% as.data.frame
 colnames(knockOut.symbol_2)[1] <- "excluded_symbols_of_file2"
 # output
-if(!file.exists(dirOut)) {dir.create(dirOut)}
+if(!file.exists(dir.Out)) {dir.create(dir.Out)}
 
 
 write_delim(res.table,path = file.path(dir.Out,"merging_table.txt"),delim = "\t",na = "")
-write_delim(knockOut.symbol_1,path = file.path(dir.Out,"sup_file_1_excludedSymbols.txt"),delim = "\t",na = "")
+write_delim(knockOut.symbol_1,path = file.path(dir.Out,"sub_file_1_excludedSymbols.txt"),delim = "\t",na = "")
 write_delim(knockOut.symbol_2,path = file.path(dir.Out,"sub_file_2_excludedSymbols.txt"),delim = "\t",na = "")
 ```
 
