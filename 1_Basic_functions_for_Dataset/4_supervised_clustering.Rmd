@@ -1,35 +1,31 @@
 ---
-title: "unsupervised_clustering"
+title: "supervised_clustering"
 author: "Sanghee Kang"
-date: "2017년 1월 22일"
+date: "2017년 1월 23일"
 output: html_document
 ---
+
+# Group data must have columns, "sample" & "group"
 
 ```{r}
 #===================================================================
 # Properties: user input
 #-------------------------------------------------------------------
-in.file <- file.choose()
+print("Choose the dataset.......")
+in.file_dataset <- file.choose()
+print("Choose the group data.....")
+in.file_group <- file.choose()
 
 Start.col <- 2
-tree_cut <- 3
-distanceOption <- "pearson"
-linkOption <- "average"
 
-tree_cut_r <- 3
-# gene flitering
-atLeastObservation_val <- 1
-ABS_value <- 2
-SD_val <- 2
+pValue_cutoff <- 0.001
+averageDifference <- 3
 
 #===================================================================
 
+dir     <- dirname(in.file_dataset)
+dirOut <- paste0(dir,"/output_superClustering")
 
-dir     <- dirname(in.file)
-dirOut <- paste0(dir,"/output_clustering")
-
-
-#====================================functions
 ## To install Packages-------------
 instPak <- function(pkg){
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
@@ -107,100 +103,87 @@ packages <- c("ggplot2", "dplyr", "reshape2","readr","colorspace","dendextend","
 instPak (packages) 
 #-----------------------------
 
-
 # import data
-raw.data <- read_delim(in.file,delim = "\t")
-
+raw.data <- read_delim(in.file_dataset,delim = "\t")
+raw.groupdata <- read_delim(in.file_group,delim = "\t")[c("sample","group")]
+raw.groupdata$group <- as.character(raw.groupdata$group)
+raw.groupdata$group <- as.factor(raw.groupdata$group)
 if (Start.col>2) {raw.data_1 <-raw.data[-c(1:(Start.col-2))]} else {raw.data_1 <-raw.data }
+if (length(levels(raw.groupdata$group)) !=2){ 
+  print("group does not consisted of 2.....")
+  break()
+}
+
 
 # data processing
-################################################################################
-cluster.raw <- raw.data_1 %>% duplicateRemoverbySD %>% geneMedianCentering %>% geneFilterByABS(absVal = ABS_value, AtLeastObservation = atLeastObservation_val) %>% geneFilterBySD(sdValue = SD_val) # gene filtering
-#################################################################################
 
-# clustering start
+data.process <- raw.data_1
+data.process_1<- matrixTranspositionXY(data.process)
+groupdata <- raw.groupdata %>% arrange(group)
+a_group <- groupdata %>% filter(group==levels(groupdata$group)[1])
+b_group <- groupdata %>% filter(group==levels(groupdata$group)[2])
 
-cluster.data <- matrixTranspositionXY(cluster.raw)
+data.process_1_a <- inner_join(a_group,data.process_1,by=c("sample"="sample"))[-2] %>% matrixTranspositionXY()
+data.process_1_b <- inner_join(b_group,data.process_1,by=c("sample"="sample"))[-2] %>% matrixTranspositionXY()
 
-ID.data <- t(cluster.data[1])
-raw.data.matrix <- as.matrix(cluster.data[-1])
+res.table <- matrix(nrow = 1,ncol = 2)
+data.process_1_a_m <- data.process_1_a[c(2:ncol(data.process_1_a))] %>% as.matrix()
+data.process_1_b_m <- data.process_1_b[c(2:ncol(data.process_1_b))] %>% as.matrix()
+for (i in 1:nrow(data.process_1_a)) {
+  k_1 <- data.process_1_a_m[i,] 
+  k_2 <- data.process_1_b_m[i,] 
+  average_d <- mean(k_1,na.rm = T)-mean(k_2,na.rm = T)
+  t_p <- t.test(k_1,k_2)
+  t_p <- t_p$p.value
+  res.tem <- matrix(c(average_d,t_p),nrow = 1,ncol = 2)
+  res.table <- rbind(res.table,res.tem)
+}
+res.table <- res.table[-1,] %>% as.data.frame()
+res.table <- cbind(data.process_1_a[1],res.table)
+colnames(res.table) <- c("gene","average_d","t_test_p")
 
+# data filter by input
 
-d_dataClu <- Dist(raw.data.matrix, method = distanceOption)
-hc_dataClu <- hclust(d_dataClu, method = linkOption)
-dend <- as.dendrogram(hc_dataClu)
-# dend <- rotate(dend, 1:5698)
-dend <- color_branches(dend, k= tree_cut)
-labels(dend) <- ID.data[order.dendrogram(dend)]
+filinterd_list <- res.table %>% filter(t_test_p < pValue_cutoff) %>% filter(abs(average_d)>averageDifference) %>% arrange(average_d)
+print(paste0("The ",nrow(filinterd_list)," were filtered of ",nrow(res.table),"......"))
 
-# clutering group to TXT file
-clusterCut <- cutree(hc_dataClu,tree_cut)
-ordered_ID <- ID.data[order.dendrogram(dend)] %>% as.data.frame()
-cutting_1 <-  cbind(cluster.data[1],clusterCut)
-file.cutting.sample <- inner_join(ordered_ID,cutting_1,by=c("."="sample"))
+# join according to filtered list
 
+flitered_table <- inner_join(filinterd_list,data.process_1_a,by=c("gene"="sample"))
+flitered_table <- inner_join(flitered_table,data.process_1_b,by=c("gene"="sample"))[-c(2:3)]
 
-# dend <- hang.dendrogram(dend,hang_height=0.1)
-# dend <- set(dend, "labels_cex", 0.5)
-# plot(dend)
+# drawing supervised cluster----------------------------------------------------------------
 
-#
-# par(mar = c(3,3,3,7))
-# plot(dend,
-#      main = "Clustered data set
-#      (the labels give the true groups)",
-#       nodePar = list(cex = .007))
-# legend("topleft", legend = levels(groupData$acronym), fill = rainbow_hcl(length(levels(groupData$acronym))))
+flitered_table_medianCentering <- geneMedianCentering(flitered_table)
+data.clustering_heatmap <- flitered_table_medianCentering[-1]
 
-
-## vertical clustering
-cluster.data_r <- cluster.raw
-ID.data_r <- t(cluster.data_r[1])
-raw.data.matrix_r <- as.matrix(cluster.data_r[-1])
-
-
-d_dataClu_r <- Dist(raw.data.matrix_r, method = distanceOption)
-hc_dataClu_r <- hclust(d_dataClu_r, method = linkOption)
-dend_r <- as.dendrogram(hc_dataClu_r)
-# dend <- rotate(dend, 1:5698)
-# dend <- color_branches(dend, k=5)
-# plot(dend_r)
-
-# print gene
-clusterCut_r <- cutree(hc_dataClu_r,tree_cut_r)
-ordered_ID_r <- ID.data_r[order.dendrogram(dend_r)] %>% as.data.frame()
-cutting_1_r <-  cbind(cluster.data_r[1],clusterCut_r)
-file.cutting.gene <- inner_join(ordered_ID_r,cutting_1_r,by=c("."="sample"))
-
-
-data.clustering_heatmap <- cluster.raw[-1]
-
-row.names(data.clustering_heatmap) <- t(cluster.raw[1])
-# strip_colors <- rainbow_hcl(length(levels(groupData$acronym)))[as.numeric(groupData$acronym)]
+row.names(data.clustering_heatmap) <- t(flitered_table_medianCentering[1])
+strip_colors <- rainbow_hcl(length(levels(groupdata$group)))[as.numeric(groupdata$group)]
 
 
 data_melted <- melt(data.clustering_heatmap,id.vars = 0)
-v_1 <- quantile(data_melted$value,probs = 0.10)
-v_2 <- quantile(data_melted$value,probs = 0.90)
+intensity_heatmap <- 0.30
+v_1 <- quantile(data_melted$value,probs = intensity_heatmap)
+v_2 <- quantile(data_melted$value,probs = (1-intensity_heatmap))
 colors_break = unique(c(seq(min(data_melted$value),v_1,length=100),seq(v_1,v_2,length=100),seq(v_2,max(data_melted$value),length=100)))
 my_palette <- colorRampPalette(c("green", "black", "red"))(n = 297)
 
 if(!file.exists(dirOut))dir.create(dirOut)
-cairo_pdf(file.path(dirOut,"heatmap.pdf"),width = 15, height = 10,pointsize = 12)
+cairo_pdf(file.path(dirOut,"supervisedHeatmap.pdf"),width = 15, height = 10,pointsize = 12)
 
 heatmap.2(as.matrix(data.clustering_heatmap),
           # main = "Heatmap for the data set",
           # srtCol = 20,
-          dendrogram = "both",
-          Rowv = dend_r,
-          Colv = dend, # this to make sure the columns are not ordered
+          dendrogram = "none",
+          Rowv = F,
+          Colv = F, # this to make sure the columns are not ordered
           # margins =c(5,0.1),     
           # key.xlab = "Cm",
           # denscol = "grey",
           density.info = "density",
           breaks=colors_break,
           #RowSideColors = strip_colors, # to add nice colored strips
-          # ColSideColors = strip_colors,
+          ColSideColors = strip_colors,
           col = my_palette,
           trace="none",
           cexRow = 0.3,
@@ -209,33 +192,26 @@ heatmap.2(as.matrix(data.clustering_heatmap),
 
 dev.off()
 
-bmp(file.path(dirOut,"heatmap.bmp"),width = 1000, height = 700,pointsize = 12, bg = "white")
+bmp(file.path(dirOut,"supervisedHeatmap.bmp"),width = 1000, height = 700,pointsize = 12, bg = "white")
 heatmap.2(as.matrix(data.clustering_heatmap),
           # main = "Heatmap for the data set",
           # srtCol = 20,
-          dendrogram = "both",
-          Rowv = dend_r,
-          Colv = dend, # this to make sure the columns are not ordered
+          dendrogram = "none",
+          Rowv = F,
+          Colv = F, # this to make sure the columns are not ordered
           # margins =c(5,0.1),     
           # key.xlab = "Cm",
           # denscol = "grey",
           density.info = "density",
           breaks=colors_break,
           #RowSideColors = strip_colors, # to add nice colored strips
-          # ColSideColors = strip_colors,
+          ColSideColors = strip_colors,
           col = my_palette,
           trace="none",
           cexRow = 0.3,
           symm=F,symkey=F,symbreaks=T, scale="none"
 )
 dev.off()
-
-r2atr(hc_dataClu, file=file.path(dirOut,"cluster.atr"))
-r2gtr(hc_dataClu_r, file=file.path(dirOut,"cluster.gtr"))
-r2cdt(hc_dataClu_r,hc_dataClu,as.matrix(data.clustering_heatmap) ,file=file.path(dirOut,"cluster.cdt"))
-
-write_delim(x = file.cutting.sample,path = file.path(dirOut,"sample_treeView.txt"),delim = "\t")
-write_delim(x = file.cutting.gene,path = file.path(dirOut,"gene_treeView.txt"),delim = "\t")
-
+write_delim(x = flitered_table,path = file.path(dirOut,"table_supervisedClustering.txt"),delim = "\t")
 ```
 
