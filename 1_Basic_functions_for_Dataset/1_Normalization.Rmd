@@ -13,9 +13,9 @@ output: html_document
 # Properties: user input
 #-------------------------------------------------------------------
 in.file <- file.choose()
-Start.col <- as.numeric(readline(prompt="Enter the numeric-data starting column (interger): "))  # The Numeric-array-data starts at this column
+Start.col <- 2  # The Numeric-array-data starts at this column
 dir     <- dirname(in.file)
-doLog  <-   readline(prompt="Transform the data to log2 values (T or F): ") # transform to log2 values
+doLog  <- "F" # transform to log2 values
 dirOut <- paste0(dir,"/output_norm")
 #===================================================================
 
