@@ -1,0 +1,62 @@
+---
+title: "colorStripe"
+author: "Sanghee Kang"
+date: "2017년 1월 22일"
+output: html_document
+---
+# This code creates a color stripe for each group. The data must contain a "group" column. Colors are automatically generated.
+
+```{r}
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+print("Choose the file")
+in.file <- file.choose() 
+directions <- "transverse"
+
+dir.in     <- dirname(in.file)
+dir.Out <- paste0(dir.in,"/output_colorStripe")
+#===================================================================
+
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg))
+  install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+## bar expression of colors-------
+rect_h <- function(col, border = "light gray"){ # Horizontal
+  n <- length(col)
+  plot(0, 0, type="n", xlim = c(0, 1), ylim = c(0, 1), axes = F, xlab = "", ylab = "")
+  rect(0:(n-1)/n, 0, 1:n/n, 1, col = col, border = border)
+}
+rect_v <- function(col, border = "light gray"){ # Horizontal
+  n <- length(col)
+  plot(0, 0, type="n", xlim = c(0, 1), ylim = c(0, 1), axes = F, xlab = "", ylab = "")
+  rect(0,0:(n-1)/n,1,1:n/n,col = col, border = border)
+}
+
+#----------------------------------------
+#------------- Packages ----
+packages <- c("colorspace","dplyr","readr")
+instPak (packages)
+#-----------------------------
+raw.data <- read_delim(in.file,delim = "\t")
+
+raw.data$group <- raw.data$group %>% as.character() %>% as.factor()
+
+n <- length(levels(raw.data$group))
+
+
+if(!file.exists(dir.Out)) {dir.create(dir.Out)}
+cairo_pdf(file.path(dir.Out,"colorbar.pdf"),width = 15, height = 10,pointsize = 12)
+if (directions=="transverse") {
+  rect_h(rainbow_hcl(n)[1:n][raw.data$group]) #rect_h(c("#FF0000FF","#FF8000FF","#FFFF00FF","#FFFF80FF")[raw.data$Group]) # color customize function
+} else{
+  rect_v(rainbow_hcl(n)[1:n][rev(raw.data$group)])
+}
+dev.off()
+
+```
+
