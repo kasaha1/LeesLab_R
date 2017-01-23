@@ -115,7 +115,36 @@ if (Start.col>2) {raw.data_1 <-raw.data[-c(1:(Start.col-2))]} else {raw.data_1 <
 
 # data processing
 ################################################################################
-cluster.raw <- raw.data_1 %>% duplicateRemoverbySD %>% geneMedianCentering %>% geneFilterByABS(absVal = ABS_value, AtLeastObservation = atLeastObservation_val) %>% geneFilterBySD(sdValue = SD_val) # gene filtering
+print("Default processing filter gene by 2 SD, at least 1 observed of absolute 2....")
+cluster.raw_temp <- raw.data_1 %>% duplicateRemoverbySD %>% geneMedianCentering
+cluster.raw <-  cluster.raw_temp %>% geneFilterByABS(absVal = ABS_value, AtLeastObservation = atLeastObservation_val) %>% geneFilterBySD(sdValue = SD_val) # gene filtering
+
+# ----Fixing for interactive gene filtering
+# while (TRUE) {
+#   cluster.raw_temp_1 <- cluster.raw_temp
+#   print("adjust values........")
+#   gene_filter_question <- readline(prompt = "Do you want to adjust value of filtering ? (y or n)")
+#   if (gene_filter_question=="n"){
+#     break()
+#   } else {
+#     q_ABS <- readline(prompt = "Do you want to fileter by ABSOLUTE VALUE? (y or n)")
+#     if (q_ABS == "y") {
+#       q_ABS_ABS <- as.numeric(readline(prompt = "What's 'ABOLUTE value'?"))
+#       q_ABS_count <- as.integer(readline(prompt = "What's 'at LeastObservation value'?"))
+#       cluster.raw_temp_1 <- cluster.raw_temp_1 %>% geneFilterByABS(absVal = q_ABS_ABS, AtLeastObservation = q_ABS_count)
+#       cluster.raw <-cluster.raw_temp_1
+#     }
+#     q_SD <- readline(prompt = "Do you want to fileter by Standard deviation? (y or n)")
+#     if (q_SD == "y") {
+#       q_sd_val <- as.numeric(readline(prompt = "What's 'SD value'?"))
+#       cluster.raw_temp_1 <- cluster.raw_temp_1 %>% geneFilterBySD(sdValue = q_sd_val)
+#       cluster.raw <-cluster.raw_temp_1
+#     }
+#   }
+#   
+# }
+# 
+
 #################################################################################
 
 # clustering start
