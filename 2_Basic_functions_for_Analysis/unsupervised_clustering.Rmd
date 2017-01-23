@@ -1,0 +1,230 @@
+---
+title: "unsupervised_clustering"
+author: "Sanghee Kang"
+date: "2017년 1월 22일"
+output: html_document
+---
+
+```{r}
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+in.file <- file.choose()
+
+Start.col <- 2
+tree_cut <- 3
+distanceOption <- "pearson"
+linkOption <- "average"
+
+# gene flitering
+atLeastObservation_val <- 1
+ABS_value <- 2
+SD_val <- 2
+
+#===================================================================
+
+
+dir     <- dirname(in.file)
+dirOut <- paste0(dir,"/output_clustering")
+
+
+#====================================functions
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+  install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+## Data cleaning---------------
+data_cleaning <- function(x){
+  res <- list()
+  res$classes <- sapply(x,function(y) class(y))
+  res$na<- sapply(x,function(y) sum(is.na(y)))
+  res$unique <- sapply(x, function(y) length(unique(y)))
+  res$dulplicated <- sapply(x, function(y) sum(duplicated(y)))
+  res$map <- missmap(x, main = "Missing values vs observed")
+  return(res)
+}
+## duplication removal by SD----------------------
+duplicateRemoverbySD <- function(x){
+  matrix_data <- as.matrix(x[-1])
+  sd <- apply(matrix_data,1,sd)
+  order_num <- seq(1:nrow(x))
+  transformed <- cbind(order_num,sd,x)
+  name_3 <- colnames(transformed)[3]
+  colnames(transformed)[3] <- "grouped"
+  res <- transformed %>% arrange(desc(sd)) %>% group_by(grouped) %>% filter(row_number()==1) %>% ungroup() %>% arrange(order_num)
+  colnames(res)[3] <- name_3
+  return(res[c(-1,-2)])
+}
+## Transpostion XY----------------
+matrixTranspositionXY <- function(x, firstColumnName="sample"){
+  col_names_1 <- t(x[1])
+  raw_data <- t(x[-1])
+  colnames(raw_data) <- col_names_1
+  raw_data <- as.data.frame(raw_data)
+  row_name_1 <- row.names(raw_data)
+  raw_data <- cbind(row_name_1,raw_data)
+  row.names(raw_data) <- NULL
+  colnames(raw_data)[1] <- firstColumnName
+  raw_data[,1] <- as.character(raw_data[,1])
+  return(raw_data)
+}
+
+# gene median centering
+
+geneMedianCentering <- function(x){
+  raw.data <- x[-1] %>% as.matrix()
+  median.table <- apply(raw.data ,c(1),median,na.rm = T) 
+  median_centered <- raw.data-median.table
+return(cbind(x[1],median_centered))
+}
+
+# Gene filtering
+
+geneFilterBySD <- function(x, sdValue =2){
+  raw.data <- as.matrix(x[-1])
+  sd.filter <- apply(raw.data,1,sd)
+  sd_merged <- cbind(sd.filter,x) %>% filter(sd.filter>sdValue)
+  print(paste(nrow(sd_merged),"passed out of",nrow(x),"-- FilterBySD"))
+  return(sd_merged[-1])
+}
+
+
+geneFilterByABS <- function(x, AtLeastObservation=1, absVal=2){
+  raw.data <- as.matrix(x[-1])
+  y <- abs(raw.data) %>% apply(c(1,2),function(k){ifelse(k>absVal,TRUE,FALSE)}) %>%  apply(1,sum)
+  y_1 <- ifelse(y>=AtLeastObservation,TRUE,FALSE)
+  print(paste(nrow(x[y_1,]),"passed out of",nrow(x),"-- FilterByABS"))
+  return(x[y_1,])
+}
+#======================================================
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","readr","colorspace","dendextend","amap","gplots","corrplot","ctc","Amelia")
+instPak (packages) 
+#-----------------------------
+
+
+# import data
+raw.data <- read_delim(in.file,delim = "\t")
+
+if (Start.col>2) {raw.data_1 <-raw.data[-c(1:(Start.col-2))]} else {raw.data_1 <-raw.data }
+
+# data processing
+################################################################################
+cluster.raw <- raw.data_1 %>% duplicateRemoverbySD %>% geneMedianCentering %>% geneFilterByABS(absVal = ABS_value, AtLeastObservation = atLeastObservation_val) %>% geneFilterBySD(sdValue = SD_val) # gene filtering
+#################################################################################
+
+# clustering start
+
+cluster.data <- matrixTranspositionXY(cluster.raw)
+
+ID.data <- t(cluster.data[1])
+raw.data.matrix <- as.matrix(cluster.data[-1])
+
+
+d_dataClu <- Dist(raw.data.matrix, method = distanceOption)
+hc_dataClu <- hclust(d_dataClu, method = linkOption)
+dend <- as.dendrogram(hc_dataClu)
+# dend <- rotate(dend, 1:5698)
+dend <- color_branches(dend, k= tree_cut)
+labels(dend) <- ID.data[order.dendrogram(dend)]
+
+# clutering group to TXT file
+clusterCut <- cutree(hc_dataClu,tree_cut)
+file.cutting <- cbind(cluster.data[1],clusterCut)
+
+
+# dend <- hang.dendrogram(dend,hang_height=0.1)
+# dend <- set(dend, "labels_cex", 0.5)
+# plot(dend)
+
+#
+# par(mar = c(3,3,3,7))
+# plot(dend,
+#      main = "Clustered data set
+#      (the labels give the true groups)",
+#       nodePar = list(cex = .007))
+# legend("topleft", legend = levels(groupData$acronym), fill = rainbow_hcl(length(levels(groupData$acronym))))
+
+
+## vertical clustering
+cluster.data_r <- cluster.raw
+ID.data_r <- t(cluster.data_r[1])
+raw.data.matrix_r <- as.matrix(cluster.data_r[-1])
+
+
+d_dataClu_r <- Dist(raw.data.matrix_r, method = distanceOption)
+hc_dataClu_r <- hclust(d_dataClu_r, method = linkOption)
+dend_r <- as.dendrogram(hc_dataClu_r)
+# dend <- rotate(dend, 1:5698)
+# dend <- color_branches(dend, k=5)
+# plot(dend_r)
+
+data.clustering_heatmap <- cluster.raw[-1]
+
+row.names(data.clustering_heatmap) <- t(cluster.raw[1])
+# strip_colors <- rainbow_hcl(length(levels(groupData$acronym)))[as.numeric(groupData$acronym)]
+
+
+data_melted <- melt(data.clustering_heatmap,id.vars = 0)
+v_1 <- quantile(data_melted$value,probs = 0.10)
+v_2 <- quantile(data_melted$value,probs = 0.90)
+colors_break = unique(c(seq(min(data_melted$value),v_1,length=100),seq(v_1,v_2,length=100),seq(v_2,max(data_melted$value),length=100)))
+my_palette <- colorRampPalette(c("green", "black", "red"))(n = 297)
+
+if(!file.exists(dirOut))dir.create(dirOut)
+cairo_pdf(file.path(dirOut,"heatmap.pdf"),width = 15, height = 10,pointsize = 12)
+
+heatmap.2(as.matrix(data.clustering_heatmap),
+          # main = "Heatmap for the data set",
+          # srtCol = 20,
+          dendrogram = "both",
+          Rowv = dend_r,
+          Colv = dend, # this to make sure the columns are not ordered
+          # margins =c(5,0.1),     
+          # key.xlab = "Cm",
+          # denscol = "grey",
+          density.info = "density",
+          breaks=colors_break,
+          #RowSideColors = strip_colors, # to add nice colored strips
+          # ColSideColors = strip_colors,
+          col = my_palette,
+          trace="none",
+          cexRow = 0.3,
+          symm=F,symkey=F,symbreaks=T, scale="none"
+)
+
+dev.off()
+
+bmp(file.path(dirOut,"heatmap.bmp"),width = 1000, height = 700,pointsize = 12, bg = "white")
+heatmap.2(as.matrix(data.clustering_heatmap),
+          # main = "Heatmap for the data set",
+          # srtCol = 20,
+          dendrogram = "both",
+          Rowv = dend_r,
+          Colv = dend, # this to make sure the columns are not ordered
+          # margins =c(5,0.1),     
+          # key.xlab = "Cm",
+          # denscol = "grey",
+          density.info = "density",
+          breaks=colors_break,
+          #RowSideColors = strip_colors, # to add nice colored strips
+          # ColSideColors = strip_colors,
+          col = my_palette,
+          trace="none",
+          cexRow = 0.3,
+          symm=F,symkey=F,symbreaks=T, scale="none"
+)
+dev.off()
+
+# r2atr(hc_dataClu, file="cluster.atr")
+# r2gtr(hc_dataClu_r, file="cluster.gtr")
+# r2cdt(hc_dataClu_r,hc_dataClu,as.matrix(data.clustering_heatmap) ,file="cluster.cdt")
+
+write_delim(x = file.cutting,path = file.path(dirOut,"cut_tree.txt"),delim = "\t")
+
+```
+
