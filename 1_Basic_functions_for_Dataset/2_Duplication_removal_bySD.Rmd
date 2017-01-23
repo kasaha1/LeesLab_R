@@ -31,7 +31,7 @@ instPak <- function(pkg){
 }
 
 #------------- Packages ----
-packages <- c("readr")
+packages <- c("readr","dplyr")
 instPak (packages) 
 #-----------------------------
 
