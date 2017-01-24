@@ -263,6 +263,7 @@ r2atr(hc_dataClu, file=file.path(dirOut,"cluster.atr"))
 r2gtr(hc_dataClu_r, file=file.path(dirOut,"cluster.gtr"))
 r2cdt(hc_dataClu_r,hc_dataClu,as.matrix(data.clustering_heatmap) ,file=file.path(dirOut,"cluster.cdt"))
 
+colnames(file.cutting.sample) <- c("sample","group")
 write_delim(x = file.cutting.sample,path = file.path(dirOut,"sample_treeView.txt"),delim = "\t")
 write_delim(x = file.cutting.gene,path = file.path(dirOut,"gene_treeView.txt"),delim = "\t")
 

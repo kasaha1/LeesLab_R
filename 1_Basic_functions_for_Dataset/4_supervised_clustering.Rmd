@@ -16,8 +16,9 @@ in.file_dataset <- file.choose()
 print("Choose the group data.....")
 in.file_group <- file.choose()
 
-Start.col <- 2
+Start.col <- 2 # the starting column of numeric data in dataset
 
+group_selected <- "A" 
 pValue_cutoff <- 0.001
 averageDifference <- 3
 
@@ -105,14 +106,19 @@ instPak (packages)
 
 # import data
 raw.data <- read_delim(in.file_dataset,delim = "\t")
-raw.groupdata <- read_delim(in.file_group,delim = "\t")[c("sample","group")]
+raw.groupdata_in <- read_delim(in.file_group,delim = "\t")[c("sample","group")]
+if (Start.col>2) {raw.data_1 <-raw.data[-c(1:(Start.col-2))]} else {raw.data_1 <-raw.data }
+#-----------------------------------------===============-------------------
+
+
+#-----------------------------------------
+print("If group does not consisted of 2 groups.....,the others get together as one group as except for 'group selected'")
+raw.groupdata <- raw.groupdata_in
+raw.groupdata$group <- as.character(raw.groupdata$group)
+raw.groupdata$group[raw.groupdata$group!=group_selected] <- "theOthers"
 raw.groupdata$group <- as.character(raw.groupdata$group)
 raw.groupdata$group <- as.factor(raw.groupdata$group)
-if (Start.col>2) {raw.data_1 <-raw.data[-c(1:(Start.col-2))]} else {raw.data_1 <-raw.data }
-if (length(levels(raw.groupdata$group)) !=2){ 
-  print("group does not consisted of 2.....")
-  break()
-}
+
 
 
 # data processing
@@ -213,5 +219,6 @@ heatmap.2(as.matrix(data.clustering_heatmap),
 )
 dev.off()
 write_delim(x = flitered_table,path = file.path(dirOut,"table_supervisedClustering.txt"),delim = "\t")
+write_delim(x = raw.groupdata,path = file.path(dirOut,"groupDataRevised.txt"),delim = "\t")
 ```
 
