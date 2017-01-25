@@ -11,7 +11,7 @@ output: html_document
 
 ## You need three datasets to execute this code.
 1. trainingSet: gene signiture should have the first column as *'Symbol'* and the number should start from the second column.
-2. groupSet: This is the data divided by the group of samples in the tainingSet. You must have a *'group'* column.
+2. groupSet: This is the data divided by the group of samples in the tainingSet. You must have  *'sample','group'* column.
 3. testSet: should have the same structure as tainingSet.  
 
 You chose the group to train in the parameter. 
@@ -28,10 +28,10 @@ in.file_group <- file.choose()
 print("Choose the testSet")
 in.file_testDataset <- file.choose()
 
-group_selected <- "EBV" 
+group_selected <- "HS" 
 
 Do_median_centering <- FALSE
-Do_divid_by_STD <- FALSE
+Do_divid_by_STD <- TRUE
 
 Do_cross_validation <- FALSE # you can choose "TRUE" or "FALSE"
 #===================================================================
@@ -101,7 +101,7 @@ instPak <- function(pkg){
 }
 
 #------------- Packages ----
-packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","BCBCSF")
+packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","BCBCSF",)
 instPak (packages) 
 #-----------------------------
 
@@ -183,7 +183,7 @@ colnames(resultTable) <- c("sample",paste("probaility of",group_selected),"proba
 resultTable$group[resultTable$group=="1"] <- group_selected
 resultTable$group[resultTable$group=="2"] <- "others"
 write_delim(x = resultTable,path = file.path(dir.Out,"prediction_result.txt"),delim = "\t")
-
+write_delim(x = testSet,path = file.path(dir.Out,"fitered_testset.txt"),delim = "\t")
 
 ##########################################################################
 ####################### visualizing prediction results ###################
@@ -232,6 +232,105 @@ write_delim(x = val_summary,path = file.path(dir.Out,"crossVaildation_summary.tx
 ## computer cluster, you better parallel the cross validation folds.
 ##
 }
+############# HEATMAP FOR RESULT
+# grouping
+data.process <- testSet
+data.process_1<- testSet_t
+resultTable$group[resultTable$group==group_selected] <- "1"
+resultTable$group[resultTable$group=="others"] <- "2"
+group.res <- resultTable[c("sample","group")]
+groupdata <- group.res %>% arrange(group)
+groupdata$group <- as.factor(groupdata$group )
+a_group <- groupdata %>% filter(group==levels(groupdata$group)[1])
+b_group <- groupdata %>% filter(group==levels(groupdata$group)[2])
+
+data.process_1_a <- inner_join(a_group,data.process_1,by=c("sample"="sample"))[-2] %>% matrixTranspositionXY()
+data.process_1_b <- inner_join(b_group,data.process_1,by=c("sample"="sample"))[-2] %>% matrixTranspositionXY()
+
+# sorting by average difference
+
+res.table <- matrix(nrow = 1,ncol = 1)
+data.process_1_a_m <- data.process_1_a[c(2:ncol(data.process_1_a))] %>% as.matrix()
+data.process_1_b_m <- data.process_1_b[c(2:ncol(data.process_1_b))] %>% as.matrix()
+for (i in 1:nrow(data.process_1_a)) {
+  k_1 <- data.process_1_a_m[i,] 
+  k_2 <- data.process_1_b_m[i,] 
+  average_d <- mean(k_1,na.rm = T)-mean(k_2,na.rm = T)
+  # t_p <- t.test(k_1,k_2)
+  # t_p <- t_p$p.value
+  res.tem <- matrix(c(average_d),nrow = 1,ncol = 1)
+  res.table <- rbind(res.table,res.tem)
+}
+res.table <- res.table[-1,] %>% as.data.frame()
+res.table <- cbind(data.process_1_a[1],res.table)
+colnames(res.table) <- c("gene","average_d")
+
+filinterd_list <- res.table %>% arrange(average_d)
+flitered_table <- inner_join(filinterd_list,data.process_1_a,by=c("gene"="sample"))
+flitered_table <- inner_join(flitered_table,data.process_1_b,by=c("gene"="sample"))[-c(2)]
+
+# drawing supervised cluster----------------------------------------------------------------
+
+flitered_table_medianCentering <- geneMedianCentering(flitered_table)
+data.clustering_heatmap <- flitered_table_medianCentering[-1]
+
+row.names(data.clustering_heatmap) <- t(flitered_table_medianCentering[1])
+strip_colors <- rainbow_hcl(length(levels(groupdata$group)))[as.numeric(groupdata$group)]
+
+
+data_melted <- melt(data.clustering_heatmap,id.vars = 0)
+intensity_heatmap <- 0.30
+v_1 <- quantile(data_melted$value,probs = intensity_heatmap)
+v_2 <- quantile(data_melted$value,probs = (1-intensity_heatmap))
+colors_break = unique(c(seq(min(data_melted$value),v_1,length=100),seq(v_1,v_2,length=100),seq(v_2,max(data_melted$value),length=100)))
+my_palette <- colorRampPalette(c("green", "black", "red"))(n = 297)
+
+if(!file.exists(dir.Out))dir.create(dir.Out)
+cairo_pdf(file.path(dir.Out,"supervisedHeatmap.pdf"),width = 15, height = 10,pointsize = 12)
+
+heatmap.2(as.matrix(data.clustering_heatmap),
+          # main = "Heatmap for the data set",
+          # srtCol = 20,
+          dendrogram = "none",
+          Rowv = F,
+          Colv = F, # this to make sure the columns are not ordered
+          # margins =c(5,0.1),     
+          # key.xlab = "Cm",
+          # denscol = "grey",
+          density.info = "density",
+          breaks=colors_break,
+          #RowSideColors = strip_colors, # to add nice colored strips
+          ColSideColors = strip_colors,
+          col = my_palette,
+          trace="none",
+          cexRow = 0.3,
+          symm=F,symkey=F,symbreaks=T, scale="none"
+)
+
+dev.off()
+
+bmp(file.path(dir.Out,"supervisedHeatmap.bmp"),width = 1000, height = 700,pointsize = 12, bg = "white")
+heatmap.2(as.matrix(data.clustering_heatmap),
+          # main = "Heatmap for the data set",
+          # srtCol = 20,
+          dendrogram = "none",
+          Rowv = F,
+          Colv = F, # this to make sure the columns are not ordered
+          # margins =c(5,0.1),     
+          # key.xlab = "Cm",
+          # denscol = "grey",
+          density.info = "density",
+          breaks=colors_break,
+          #RowSideColors = strip_colors, # to add nice colored strips
+          ColSideColors = strip_colors,
+          col = my_palette,
+          trace="none",
+          cexRow = 0.3,
+          symm=F,symkey=F,symbreaks=T, scale="none"
+)
+dev.off()
+write_delim(x = flitered_table,path = file.path(dir.Out,"table_supervisedClustering.txt"),delim = "\t")
+
 
 ```
 

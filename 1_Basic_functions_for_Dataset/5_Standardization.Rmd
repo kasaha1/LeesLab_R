@@ -13,8 +13,8 @@ output: html_document
 # Properties: user input
 #-------------------------------------------------------------------
 in.file <- file.choose() # The first column name is "Symbol" which gonna be the key for merging
-start.col <- as.numeric(readline(prompt="Enter the numeric-data starting column (interger): "))  # The Numeric-array-data starts at this column
-dividedBySTD <- "T" # T or F . If "F", just median centering gonna perform
+start.col <- 2  # The Numeric-array-data starts at this column
+dividedBySTD <- TRUE # T or F . If "F", just median centering gonna perform
 dir.in <- dirname(in.file)
 dir.out <- paste0(dir.in,"/output_standardization")
 #===================================================================
@@ -42,7 +42,7 @@ median.table <- apply(num.raw.data,c(1),median,na.rm = T)
 res.table <- num.raw.data - median.table # median centering
 if(!file.exists(dir.out)) {dir.create(dir.out)}
 
-if (dividedBySTD == "T") {
+if (dividedBySTD) {
   
   sd.table <- apply(res.table,1,sd,na.rm = T) 
   res.table_1 <- res.table/sd.table # divided by standard deviation
