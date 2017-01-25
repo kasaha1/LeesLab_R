@@ -101,7 +101,7 @@ instPak <- function(pkg){
 }
 
 #------------- Packages ----
-packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","BCBCSF",)
+packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","BCBCSF","dendextend","amap","gplots","corrplot","ctc")
 instPak (packages) 
 #-----------------------------
 
