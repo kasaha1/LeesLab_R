@@ -15,6 +15,7 @@ output: html_document
 3. testSet: should have the same structure as tainingSet.  
 
 You chose the group to train in the parameter. 
+You can choose whether to do run cross-validation.
 
 ```{r}
 #===================================================================
@@ -28,6 +29,9 @@ print("Choose the testSet")
 in.file_testDataset <- file.choose()
 
 group_selected <- "EBV" 
+
+
+Do_cross_validation <- FALSE # you can choose "TRUE" or "FALSE"
 #===================================================================
 
 
@@ -168,13 +172,14 @@ png(file.path(dir.Out,"summary.png"),width = 700, height = 500,pointsize = 12, b
 dev.off()
 
 
+if(Do_cross_validation){
 ##########################################################################
 ############################ cross validation ############################
 ##########################################################################
 ## doing cross validation with bcbcsf_fitpred on lymphoma data 
 cv_pred <- cross_vld (
   ##################### classifier, data, and fold ###################
-  fitpred_func = bcbcsf_fitpred, X = X_tr, y = y_tr, nfold = 2,
+  fitpred_func = bcbcsf_fitpred, X = X_tr, y = y_tr, 
   ################ all other arguments passed classifier ############
   nos_fsel = c(ncol(X_tr)))
 ## note: no_rmc = 100 is too small, omit it and use the default in practice
@@ -195,6 +200,8 @@ write_delim(x = val_summary,path = file.path(dir.Out,"crossVaildation_summary.tx
 
 ## warning: this function is slow if nfold is large; if you have a 
 ## computer cluster, you better parallel the cross validation folds.
-##}
+##
+}
+
 ```
 
