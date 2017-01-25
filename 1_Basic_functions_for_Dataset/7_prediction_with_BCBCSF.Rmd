@@ -1,0 +1,200 @@
+---
+title: "BCBCSF_prediction"
+author: "Sanghee Kang"
+date: "2017년 1월 24일"
+output: html_document
+---
+# This is the code for BCBCSF prediction. BCBCSF performs prediction based on bayes statistics. For more information, please see the link below.
+
+[Li, L. (2012), Bias-corrected Hierarchical Bayesian Classification with a Selected Subset of High-dimensional Features, Journal of American Statistical Association,107:497,120-134](http://amstat.tandfonline.com/doi/abs/10.1198/jasa.2011.ap10446)
+
+
+## You need three datasets to execute this code.
+1. trainingSet: gene signiture should have the first column as *'Symbol'* and the number should start from the second column.
+2. groupSet: This is the data divided by the group of samples in the tainingSet. You must have a *'group'* column.
+3. testSet: should have the same structure as tainingSet.  
+
+You chose the group to train in the parameter. 
+
+```{r}
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+print("Choose the trainingSet.......")
+in.file_trainingDataset <- file.choose()
+print("Choose the groupSet.....")
+in.file_group <- file.choose()
+print("Choose the testSet")
+in.file_testDataset <- file.choose()
+
+group_selected <- "EBV" 
+#===================================================================
+
+
+dir <- dirname(in.file_trainingDataset)
+dir.Out <- paste0(dir,"/output_prediction")
+
+library(dplyr)
+library(Amelia)
+## Data cleaning---------------
+data_cleaning <- function(x){
+  res <- list()
+  res$classes <- sapply(x,function(y) class(y))
+  res$na<- sapply(x,function(y) sum(is.na(y)))
+  res$unique <- sapply(x, function(y) length(unique(y)))
+  res$dulplicated <- sapply(x, function(y) sum(duplicated(y)))
+  res$map <- missmap(x, main = "Missing values vs observed")
+  return(res)
+}
+## duplication removal by SD----------------------
+duplicateRemoverbySD <- function(x){
+  matrix_data <- as.matrix(x[-1])
+  sd <- apply(matrix_data,1,sd)
+  order_num <- seq(1:nrow(x))
+  transformed <- cbind(order_num,sd,x)
+  name_3 <- colnames(transformed)[3]
+  colnames(transformed)[3] <- "grouped"
+  res <- transformed %>% arrange(desc(sd)) %>% group_by(grouped) %>% filter(row_number()==1) %>% ungroup() %>% arrange(order_num)
+  colnames(res)[3] <- name_3
+  return(res[c(-1,-2)])
+}
+## Transpostion XY----------------
+matrixTranspositionXY <- function(x, firstColumnName="sample"){
+  col_names_1 <- t(x[1])
+  raw_data <- t(x[-1])
+  colnames(raw_data) <- col_names_1
+  raw_data <- as.data.frame(raw_data)
+  row_name_1 <- row.names(raw_data)
+  raw_data <- cbind(row_name_1,raw_data)
+  row.names(raw_data) <- NULL
+  colnames(raw_data)[1] <- firstColumnName
+  raw_data[,1] <- as.character(raw_data[,1])
+  return(raw_data)
+}
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+  install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","BCBCSF")
+instPak (packages) 
+#-----------------------------
+
+
+# import data
+training.raw.data <- read_delim(in.file_trainingDataset,delim = "\t") %>%duplicateRemoverbySD()
+
+training.raw.groupdata_in <- read_delim(in.file_group,delim = "\t")[c("sample","group")] %>%duplicateRemoverbySD()
+test.raw.data <- read_delim(in.file_testDataset,delim = "\t") %>%duplicateRemoverbySD()
+#-----------------------------------------===============-------------------
+
+
+#-----------------------------------------
+print("If group does not consisted of 2 groups.....,the others get together as one group as except for 'group selected'")
+raw.groupdata <- training.raw.groupdata_in
+raw.groupdata$group <- as.character(raw.groupdata$group)
+raw.groupdata$group[raw.groupdata$group!=group_selected] <- 2
+raw.groupdata$group[raw.groupdata$group==group_selected] <- 1
+raw.groupdata$group <- as.character(raw.groupdata$group)
+raw.groupdata$group <- as.numeric(raw.groupdata$group)
+
+# data merging
+
+join_dataset <- inner_join(training.raw.data,test.raw.data,by=c("Symbol"="Symbol"))
+trainingSet <- join_dataset[1:ncol(training.raw.data)]
+testSet <- join_dataset[c(1,(ncol(training.raw.data)+1):ncol(join_dataset))]
+groupSet <- raw.groupdata
+
+# data processing
+trainingSet_t <- trainingSet %>% matrixTranspositionXY()
+testSet_t <- testSet %>% matrixTranspositionXY()
+
+join_dataset <- inner_join(trainingSet_t,groupSet,by=c("sample"="sample"))
+trainingSet_t <- join_dataset[1:ncol(trainingSet_t)]
+groupSet <- join_dataset[c(1,(ncol(trainingSet_t)+1):ncol(join_dataset))]
+
+####################### BCBCSF -------------------
+## training data
+X_tr <- trainingSet_t[-1] %>% as.matrix()
+y_tr <- groupSet$group 
+## test data 
+X_ts <- testSet_t[-1] %>% as.matrix()
+y_ts <- testSet_t[1]
+
+##########################################################################
+######################## training and prediction #########################
+##########################################################################
+## fitting training data with top features selected by F-statistic 
+out_fit <- bcbcsf_fitpred (X_tr = X_tr, y_tr = y_tr, nos_fsel = c(ncol(X_tr)))
+## note 1: if 'X_ts' is given above, prediction is made after fitting
+## note 2: no_rmc = 100 is too small, omit it and use the default
+
+## predicting class labels of test cases 
+out_pred <- bcbcsf_pred (X_ts = X_ts, out_fit = out_fit)
+
+
+
+# result write
+if(!file.exists(dir.Out))dir.create(dir.Out)
+
+res <- out_pred$array_probs_pred %>% as.data.frame() # probality table -----
+res.class <- apply(res,1,which.max) # which class -----
+res.proba <- apply(res,1,max) # probality -----
+resultTable <- cbind(y_ts,res,res.proba,res.class)
+colnames(resultTable) <- c("sample",paste("probaility of",group_selected),"probaility of Others","Max_prob","group")
+resultTable$group[resultTable$group=="1"] <- group_selected
+resultTable$group[resultTable$group=="2"] <- "others"
+write_delim(x = resultTable,path = file.path(dir.Out,"prediction_result.txt"),delim = "\t")
+
+
+##########################################################################
+####################### visualizing prediction results ###################
+##########################################################################
+## reload one bcbcsf fit result from hardrive
+fit_bcbcsf <- reload_fit_bcbcsf (out_fit$fitfiles[1])
+## the fitting result for no_fsel = 50 can be retrieved directly from
+## out_fit:
+fit_bcbcsf_fsel50 <- out_fit$fit_bcbcsf
+## summarize the fitting result
+sum_fit <- bcbcsf_sumfit (fit_bcbcsf)
+
+## visualize fitting result
+png(file.path(dir.Out,"summary.png"),width = 700, height = 500,pointsize = 12, bg = "white")
+  bcbcsf_plotsumfit (sum_fit)
+dev.off()
+
+
+##########################################################################
+############################ cross validation ############################
+##########################################################################
+## doing cross validation with bcbcsf_fitpred on lymphoma data 
+cv_pred <- cross_vld (
+  ##################### classifier, data, and fold ###################
+  fitpred_func = bcbcsf_fitpred, X = X_tr, y = y_tr, nfold = 2,
+  ################ all other arguments passed classifier ############
+  nos_fsel = c(ncol(X_tr)))
+## note: no_rmc = 100 is too small, omit it and use the default in practice
+
+## evaluate prediction given true labels            
+validation <- eval_pred (out_pred = cv_pred, y_ts = y_tr)   
+val_probs_at_truelabels <- validation$probs_at_truelabels %>% as.data.frame()
+val_probs_at_truelabels <- cbind(groupSet,val_probs_at_truelabels)
+val_probs_at_truelabels$group[val_probs_at_truelabels$group=="1"] <- group_selected
+val_probs_at_truelabels$group[val_probs_at_truelabels$group=="2"] <- "others"
+colnames(val_probs_at_truelabels)[3] <- "probability_at_truelabels"
+val_summary <- validation$summary
+
+write_delim(x = val_probs_at_truelabels,path = file.path(dir.Out,"crossVaildation.txt"),delim = "\t")
+write_delim(x = val_summary,path = file.path(dir.Out,"crossVaildation_summary.txt"),delim = "\t")
+# AMLP: minus average log probabilities at true labels, often called "deviation"
+
+
+## warning: this function is slow if nfold is large; if you have a 
+## computer cluster, you better parallel the cross validation folds.
+##}
+```
+
