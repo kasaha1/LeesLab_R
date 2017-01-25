@@ -1,0 +1,133 @@
+---
+title: "FPKM_merge_anno"
+author: "Kang sanghee"
+date: "January 25, 2017"
+output: html_document
+---
+# This code creates a single wide form from multiple pieced FPKM and annotates it.
+
+```{r}
+# Wed Jan 25 14:05:33 2017 ------------------------------
+
+print(".....It can take a long time.maybe 2~3 minutes")
+
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+  install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","tcltk2")
+instPak (packages) 
+#-----------------------------
+
+##########------------------------ INPUT ---------------------------###############
+dir.in <- tk_choose.dir(default = "", caption = "Select directory")
+
+ID_column <- "tracking_id"
+FPKM_column <- "FPKM"
+Do_annotation <- TRUE
+
+##########----------------------------------------------------------###############
+
+dir.out <- file.path(dir.in,"output")
+
+
+file.list <- list.files(dir.in)
+merged_FPKM <- matrix(nrow = 1,ncol = 3)
+for (i in c(1:length(file.list))) {
+  tem_FPKM_read <- read_delim(file.path(dir.in,file.list[i]),delim = "\t")
+  tem_FPKM_read_1 <- tem_FPKM_read[c(ID_column,FPKM_column)]
+  tem_FPKM_read_1$sample <- file.list[i]
+  merged_FPKM <- rbind(merged_FPKM,as.matrix(tem_FPKM_read_1))
+}
+merged_FPKM <- merged_FPKM[-1,] %>% as.data.frame()
+merged_FPKM$temp <- paste0(merged_FPKM$tracking_id,merged_FPKM$sample)
+
+# selecting the largest value
+merged_FPKM_filter <- merged_FPKM  %>% arrange(desc(FPKM)) %>% group_by(temp) %>% filter(row_number()==1) %>% ungroup()
+merged_FPKM_filter <- merged_FPKM_filter[,-c(4)]
+colnames(merged_FPKM_filter) <- c("tracking_id","FPKM","sample")
+# make wide form
+res.table <- dcast(data = merged_FPKM_filter,formula = tracking_id~sample, value.var = "FPKM")
+res.table$tracking_id <- as.character(res.table$tracking_id)
+
+
+if(Do_annotation){
+
+## RefSeq to Symbol---------------------------------------------------------------------------------
+## To install Packages-------------
+if (!("org.Hs.eg.db" %in% installed.packages()[, "Package"])) {
+  source("https://bioconductor.org/biocLite.R")
+  biocLite("org.Hs.eg.db")
+}
+require (org.Hs.eg.db)
+
+# RefSeq_list
+
+RefSeq.org.Hs.egREFSEQ2EG <- org.Hs.egREFSEQ2EG
+# Get the RefSeq identifier that are mapped to an entrez gene ID
+mapped_seqs <- mappedkeys(RefSeq.org.Hs.egREFSEQ2EG)
+# Convert to a list
+RefSeq_list.RefSeq.org.Hs.egREFSEQ2EG <- as.list(RefSeq.org.Hs.egREFSEQ2EG[mapped_seqs])
+
+
+# Symbol list
+symbol_get.org.Hs.egREFSEQ2EG <- org.Hs.egSYMBOL
+# Get the gene symbol that are mapped to an entrez gene identifiers
+mapped_genes <- mappedkeys(symbol_get.org.Hs.egREFSEQ2EG)
+# Convert to a list
+symbol_list.symbol_get.org.Hs.egREFSEQ2EG <- as.list(symbol_get.org.Hs.egREFSEQ2EG[mapped_genes])
+
+
+# RefSeq to Symbol function
+RefSeq_to_Symbol <- function(x){
+  if(is.null(x)){
+    return(NULL)
+  }
+  EntrezID <- RefSeq_list.RefSeq.org.Hs.egREFSEQ2EG[[x]]
+  if (is.null(EntrezID)) {
+    return(NULL)
+  } else { symbol <- symbol_list.symbol_get.org.Hs.egREFSEQ2EG[[EntrezID]]}
+  if (is.null(symbol)) {
+    return(NULL)
+  } else{
+    return(symbol)
+  }
+}
+
+
+# ex) RefSeq_to_Symbol("NR_015368")
+
+pb <- winProgressBar(title="Annotation progress bar", label="0% done", min=0, max=100, initial=0)
+numb_row <- nrow(res.table)
+
+symbol_table <- matrix(nrow = 1,ncol = 1)
+for( i in c(1:numb_row)){
+  
+  symbol_tem <- RefSeq_to_Symbol(res.table[i,1])
+  if (is.null(symbol_tem)) {
+    symbol_tem <- res.table[i,1]
+  }
+  symbol_table <- rbind(symbol_table,symbol_tem)
+  info <- sprintf("%d%% done", round((i/numb_row)*100))
+  setWinProgressBar(pb, i/(numb_row)*100, label=info)
+
+}
+close(pb)
+symbol_table <- symbol_table[-1,] %>% as.data.frame()
+res.table <- cbind(symbol_table,res.table)
+colnames(res.table)[1] <- "Symbol"
+
+}
+
+if(!file.exists(dir.out))dir.create(dir.out)
+
+write_delim(res.table,file.path(dir.out,"result_wideform.txt"),delim = "\t")
+
+
+```
+
