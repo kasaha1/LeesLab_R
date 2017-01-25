@@ -30,6 +30,8 @@ in.file_testDataset <- file.choose()
 
 group_selected <- "EBV" 
 
+Do_median_centering <- FALSE
+Do_divid_by_STD <- FALSE
 
 Do_cross_validation <- FALSE # you can choose "TRUE" or "FALSE"
 #===================================================================
@@ -75,6 +77,21 @@ matrixTranspositionXY <- function(x, firstColumnName="sample"){
   raw_data[,1] <- as.character(raw_data[,1])
   return(raw_data)
 }
+## Median centering------------------
+geneMedianCentering <- function(x){
+  raw.data <- x[-1] %>% as.matrix()
+  median.table <- apply(raw.data ,c(1),median,na.rm = T) 
+  median_centered <- raw.data-median.table
+return(cbind(x[1],median_centered))
+}
+## Standardization-------------
+geneStandardization <- function(x){
+  raw.data <- x[-1] %>% as.matrix()
+  sd.table <- apply(raw.data,1,sd,na.rm = T) 
+  res.table_1 <- raw.data/sd.table # divided by standard deviation
+  return(cbind(x[1],res.table_1))
+}
+
 ## To install Packages-------------
 instPak <- function(pkg){
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
@@ -92,8 +109,21 @@ instPak (packages)
 # import data
 training.raw.data <- read_delim(in.file_trainingDataset,delim = "\t") %>%duplicateRemoverbySD()
 
-training.raw.groupdata_in <- read_delim(in.file_group,delim = "\t")[c("sample","group")] %>%duplicateRemoverbySD()
+training.raw.groupdata_in <- read_delim(in.file_group,delim = "\t")[c("sample","group")] 
 test.raw.data <- read_delim(in.file_testDataset,delim = "\t") %>%duplicateRemoverbySD()
+
+if (Do_median_centering) {
+  training.raw.data <- training.raw.data %>% geneMedianCentering()
+  test.raw.data <- test.raw.data %>% geneMedianCentering()
+  print("Two datasets are Median centered.........")
+}
+if (Do_divid_by_STD) {
+  training.raw.data <- training.raw.data %>% geneStandardization()
+  test.raw.data <- test.raw.data %>% geneStandardization()
+  print("Two datasets are standardized.........")
+}
+
+
 #-----------------------------------------===============-------------------
 
 
