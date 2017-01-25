@@ -28,10 +28,10 @@ in.file_group <- file.choose()
 print("Choose the testSet")
 in.file_testDataset <- file.choose()
 
-group_selected <- "HS" 
+group_selected <- "EBV" 
 
 Do_median_centering <- FALSE
-Do_divid_by_STD <- TRUE
+Do_divid_by_STD <- FALSE
 
 Do_cross_validation <- FALSE # you can choose "TRUE" or "FALSE"
 #===================================================================
@@ -182,8 +182,8 @@ resultTable <- cbind(y_ts,res,res.proba,res.class)
 colnames(resultTable) <- c("sample",paste("probaility of",group_selected),"probaility of Others","Max_prob","group")
 resultTable$group[resultTable$group=="1"] <- group_selected
 resultTable$group[resultTable$group=="2"] <- "others"
-write_delim(x = resultTable,path = file.path(dir.Out,"prediction_result.txt"),delim = "\t")
-write_delim(x = testSet,path = file.path(dir.Out,"fitered_testset.txt"),delim = "\t")
+write_delim(x = resultTable,path = file.path(dir.Out,"0_prediction_result.txt"),delim = "\t")
+write_delim(x = testSet,path = file.path(dir.Out,"1_fitered_testset.txt"),delim = "\t")
 
 ##########################################################################
 ####################### visualizing prediction results ###################
@@ -329,7 +329,8 @@ heatmap.2(as.matrix(data.clustering_heatmap),
           symm=F,symkey=F,symbreaks=T, scale="none"
 )
 dev.off()
-write_delim(x = flitered_table,path = file.path(dir.Out,"table_supervisedClustering.txt"),delim = "\t")
+write_delim(x = flitered_table,path = file.path(dir.Out,"2_table_supervisedClustering.txt"),delim = "\t")
+
 
 
 ```
