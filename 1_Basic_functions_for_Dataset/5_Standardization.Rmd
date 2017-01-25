@@ -14,6 +14,7 @@ output: html_document
 #-------------------------------------------------------------------
 in.file <- file.choose() # The first column name is "Symbol" which gonna be the key for merging
 start.col <- as.numeric(readline(prompt="Enter the numeric-data starting column (interger): "))  # The Numeric-array-data starts at this column
+dividedBySTD <- "T" # T or F . If "F", just median centering gonna perform
 dir.in <- dirname(in.file)
 dir.out <- paste0(dir.in,"/output_standardization")
 #===================================================================
@@ -39,15 +40,26 @@ raw.data <- read_delim(in.file,delim = "\t")
 num.raw.data <- raw.data[start.col:ncol(raw.data)] %>% as.matrix()
 median.table <- apply(num.raw.data,c(1),median,na.rm = T)
 res.table <- num.raw.data - median.table # median centering
-sd.table <- apply(res.table,1,sd,na.rm = T) 
-res.table_1 <- res.table/sd.table # divided by standard deviation
-result.table <- cbind(raw.data[1:(start.col-1)],res.table_1)
-
-# output
 if(!file.exists(dir.out)) {dir.create(dir.out)}
 
-in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
-out.file =  paste(in.file.name,"_standardization",".txt",sep="")
-write_delim(x = result.table,path = file.path(dir.out,out.file),delim = "\t")
+if (dividedBySTD == "T") {
+  
+  sd.table <- apply(res.table,1,sd,na.rm = T) 
+  res.table_1 <- res.table/sd.table # divided by standard deviation
+  result.table <- cbind(raw.data[1:(start.col-1)],res.table_1)
+  
+  # output
+  
+  in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
+  out.file =  paste(in.file.name,"_standardization",".txt",sep="")
+  write_delim(x = result.table,path = file.path(dir.out,out.file),delim = "\t")
+} else{
+  
+  result.table <- cbind(raw.data[1:(start.col-1)],res.table)
+  in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
+  out.file =  paste(in.file.name,"_medianCentering",".txt",sep="")
+  write_delim(x = result.table,path = file.path(dir.out,out.file),delim = "\t")
+}
+
 ```
 
