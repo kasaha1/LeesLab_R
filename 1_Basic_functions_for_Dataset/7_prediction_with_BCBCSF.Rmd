@@ -4,7 +4,7 @@ author: "Sanghee Kang"
 date: "2017년 1월 24일"
 output: html_document
 ---
-# This is the code for BCBCSF prediction. BCBCSF performs prediction based on bayes statistics. For more information, please see the link below.
+# This is the code for BCBCSF prediction. BCBCSF performs prediction based on Bayes statistics. For more information, please see the link below.
 
 [Li, L. (2012), Bias-corrected Hierarchical Bayesian Classification with a Selected Subset of High-dimensional Features, Journal of American Statistical Association,107:497,120-134](http://amstat.tandfonline.com/doi/abs/10.1198/jasa.2011.ap10446)
 
