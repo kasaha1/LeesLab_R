@@ -47,7 +47,7 @@ out.p.log = paste(in.file.name,"_","profile_normlized_log2.txt",sep="")
 
 # Input file Reading
 in.data = read_delim(in.file,delim ="\t",quote = "")
-in.data.edit <-data.frame(in.data[,(Start.col+1):ncol(in.data)])
+in.data.edit <-data.frame(in.data[,(Start.col):ncol(in.data)])
 
 
 # Creat output data
