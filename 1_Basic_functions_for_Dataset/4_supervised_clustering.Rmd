@@ -24,6 +24,7 @@ averageDifference <- 3
 
 #===================================================================
 
+
 dir     <- dirname(in.file_dataset)
 dirOut <- paste0(dir,"/output_superClustering")
 
@@ -148,6 +149,11 @@ res.table <- res.table[-1,] %>% as.data.frame()
 res.table <- cbind(data.process_1_a[1],res.table)
 colnames(res.table) <- c("gene","average_d","t_test_p")
 
+
+#########_________________________data filter----
+# pValue_cutoff <- 1
+#  averageDifference <- 0
+
 # data filter by input
 
 filinterd_list <- res.table %>% filter(t_test_p < pValue_cutoff) %>% filter(abs(average_d)>averageDifference) %>% arrange(average_d)
@@ -156,7 +162,7 @@ print(paste0("The ",nrow(filinterd_list)," were filtered of ",nrow(res.table),".
 # join according to filtered list
 
 flitered_table <- inner_join(filinterd_list,data.process_1_a,by=c("gene"="sample"))
-flitered_table <- inner_join(flitered_table,data.process_1_b,by=c("gene"="sample"))[-c(2:3)]
+flitered_table <- inner_join(flitered_table,data.process_1_b,by=c("gene"="sample"))[-c(2)]
 
 # drawing supervised cluster----------------------------------------------------------------
 
@@ -189,7 +195,7 @@ heatmap.2(as.matrix(data.clustering_heatmap),
           density.info = "density",
           breaks=colors_break,
           #RowSideColors = strip_colors, # to add nice colored strips
-          ColSideColors = strip_colors,
+          #ColSideColors = strip_colors,
           col = my_palette,
           trace="none",
           cexRow = 0.3,
@@ -220,5 +226,7 @@ heatmap.2(as.matrix(data.clustering_heatmap),
 dev.off()
 write_delim(x = flitered_table,path = file.path(dirOut,"table_supervisedClustering.txt"),delim = "\t")
 write_delim(x = raw.groupdata,path = file.path(dirOut,"groupDataRevised.txt"),delim = "\t")
+
+
 ```
 
