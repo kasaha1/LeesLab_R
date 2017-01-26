@@ -162,7 +162,7 @@ print(paste0("The ",nrow(filinterd_list)," were filtered of ",nrow(res.table),".
 # join according to filtered list
 
 flitered_table <- inner_join(filinterd_list,data.process_1_a,by=c("gene"="sample"))
-flitered_table <- inner_join(flitered_table,data.process_1_b,by=c("gene"="sample"))[-c(2)]
+flitered_table <- inner_join(flitered_table,data.process_1_b,by=c("gene"="sample"))[-c(2,3)]
 
 # drawing supervised cluster----------------------------------------------------------------
 
