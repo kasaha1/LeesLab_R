@@ -199,7 +199,8 @@ dend_r <- as.dendrogram(hc_dataClu_r)
 clusterCut_r <- cutree(hc_dataClu_r,tree_cut_r)
 ordered_ID_r <- ID.data_r[order.dendrogram(dend_r)] %>% as.data.frame()
 cutting_1_r <-  cbind(cluster.data_r[1],clusterCut_r)
-file.cutting.gene <- inner_join(ordered_ID_r,cutting_1_r,by=c("."="sample"))
+temp_name <- colnames(cutting_1_r)[1]
+file.cutting.gene <- inner_join(ordered_ID_r,cutting_1_r,by=c("."=temp_name))
 
 
 data.clustering_heatmap <- cluster.raw[-1]
