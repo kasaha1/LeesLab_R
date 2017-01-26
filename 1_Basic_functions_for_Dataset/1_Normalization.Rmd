@@ -1,21 +1,19 @@
 ---
-title: "Normalization"
+title: "normalization"
 author: "Kang sanghee"
-date: "January 20, 2017"
+date: "January 26, 2017"
 output: html_document
 ---
-
-# Quantile normalization
-
 ```{r}
-
 #===================================================================
 # Properties: user input
 #-------------------------------------------------------------------
 in.file <- file.choose()
 Start.col <- 2  # The Numeric-array-data starts at this column
 dir     <- dirname(in.file)
-doLog  <- "F" # transform to log2 values
+doNoramlization <- TRUE
+doLog  <- TRUE # transform to log2 values TRUE or FALSE
+flooring_afterLog <- TRUE # TRUE or FALSE
 dirOut <- paste0(dir,"/output_norm")
 #===================================================================
 
@@ -44,8 +42,8 @@ btwn_option = "quantile" # Options: "none"', '"scale"', '"quantile"','"Aquantile
 out.fig.1 = paste(in.file.name, "_", "boxplot_preprocessing", ".jpg", sep="")
 out.fig.2 = paste(in.file.name, "_", "boxplot_",btwn_option, ".jpg", sep="")
 out.file =  paste(in.file.name,"_","profile_normlized.txt",sep="")
+out.p.log = paste(in.file.name,"_","profile_normlized_log2.txt",sep="")
 
-setwd(dir)
 
 # Input file Reading
 in.data = read_delim(in.file,delim ="\t",quote = "")
@@ -54,34 +52,51 @@ in.data.edit <-data.frame(in.data[,(Start.col+1):ncol(in.data)])
 
 # Creat output data
 
-if(!file.exists(dirOut))
-  dir.create(dirOut)
-setwd(dirOut)
+if(!file.exists(dirOut)){  dir.create(dirOut)}
+
 
 # Normalization
-M.nor <- normalizeBetweenArrays(as.matrix(in.data.edit),method=btwn_option)
+if (doNoramlization) {
+  M.nor <- normalizeBetweenArrays(as.matrix(in.data.edit),method=btwn_option)
+} else{
+  M.nor <- as.matrix(in.data.edit)
+}
+
+# flooring
+if (flooring_afterLog) {
+    flooringFunction <- function(x){
+      if (x<1) {
+        x <- 1
+      }
+      return(x)
+    }
+    M.nor <- apply(M.nor,c(1,2),flooringFunction)
+  }
+
+# Option for Log 2 (option: "T", "F")
+if(doLog)
+{
+  
+  M.nor_log <- log2(M.nor)
+  data.out.log <-cbind(in.data[,1:(Start.col-1)], round(M.nor_log,4))
+  write_delim(x = data.out.log, path =file.path(dirOut,out.p.log), delim = "\t",na = "")
+
+}
+
 
 # Writing the output table
 data.out <-cbind(in.data[,1:(Start.col-1)], round(M.nor,4))
 write_delim(x = data.out, path =file.path(dirOut,out.file), delim = "\t",na = "")
 
-# Option for Log 2 (option: "T", "F")
-if(doLog=="T")
-{
-  M.nor_log <- log2(M.nor)
-  data.out.log <-cbind(in.data[,1:(Start.col-1)], round(M.nor_log,4))
-  write_delim(x = data.out.log, path =file.path(dirOut,out.p.log), delim = "\t",na = "")
-  
-}
 
 # Boxplot for raw data
-jpeg(filename = out.fig.1, width = 4000, height = 480, pointsize = 14, quality = 30, bg = "white", res = NA)
+jpeg(filename = file.path(dirOut,out.fig.1), width = 4000, height = 480, pointsize = 14, quality = 30, bg = "white", res = NA)
 boxplot(in.data.edit, main=paste("Boxplot of ", in.file.name," Before Between normalization"))
 dev.off()
 
 
 # Boxplot for the data after Between-slide normalization
-jpeg(filename = out.fig.2, width = 4000, height = 480, pointsize = 14, quality = 20, bg = "white", res = NA)
+jpeg(filename = file.path(dirOut,out.fig.2), width = 4000, height = 480, pointsize = 14, quality = 20, bg = "white", res = NA)
 boxplot(data.frame(M.nor), main=paste("Boxplot of ", in.file, " after Between normalization", "_", btwn_option, sep=""))
 dev.off()
 
