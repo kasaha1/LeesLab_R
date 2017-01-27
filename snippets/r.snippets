@@ -102,19 +102,16 @@ snippet myPack
 	#-----------------------------
 
 snippet myFuncs
-	## My frequently used functions
-	
 	library(dplyr)
 	library(Amelia)
-	
 	## Data cleaning---------------
 	data_cleaning <- function(x){
 		res <- list()
-		res[["classes"]] <- sapply(x,function(y) class(y))
-		res[["na"]]<- sapply(x,function(y) sum(is.na(y)))
-		res[["unique"]] <- sapply(x, function(y) length(unique(y)))
-		res[["dulplicated"]] <- sapply(x, function(y) sum(duplicated(y)))
-		res[["map"]] <- missmap(x, main = "Missing values vs observed")
+		res\$classes <- sapply(x,function(y) class(y))
+		res\$na<- sapply(x,function(y) sum(is.na(y)))
+		res\$unique <- sapply(x, function(y) length(unique(y)))
+		res\$dulplicated <- sapply(x, function(y) sum(duplicated(y)))
+		res\$map <- missmap(x, main = "Missing values vs observed")
 		return(res)
 	}
 	## duplication removal by SD----------------------
@@ -183,23 +180,18 @@ snippet mySurvival
 	
 snippet myColors
 	library(colorspace)
+	library(RColorBrewer)
 	# # show examples ---------------------
 	# # wheel expression of colors-------
 	# wheel <- function(col, radius = 1, ...) pie(rep(1, length(col)), col = col, radius = radius, ...)
 	# # bar expression of colors-------
-	# rect_h <- function(col, border = "light gray"){ # Horizontal
+	# pal <- function(col, border = "light gray"){
 	#   n <- length(col)
 	#   plot(0, 0, type="n", xlim = c(0, 1), ylim = c(0, 1), axes = FALSE, xlab = "", ylab = "")
-	#   rect(0:(n-1)/n, 0, 1:n/n, 1, col = col, border = border,)
+	#   rect(0:(n-1)/n, 0, 1:n/n, 1, col = col, border = border)
 	# }
-	# rect_v <- function(col, border = "light gray"){ # vertical
-	#   n <- length(col)
-	#   plot(0, 0, type="n", xlim = c(0, 1), ylim = c(0, 1), axes = FALSE, xlab = "", ylab = "")
-	#   rect(0,0:(n-1)/n,1, 1:n/n, col = col, border = border,)
-	# }
-	# rect_h(rainbow_hcl(10)[1:10])
-	# rect_v(rev(rainbow_hcl(10)[1:10]))
 	
 	colorpal <- choose_palette() #user customizing, need to be copy and paste of function codes
 	colorpal(10)[c(1:10)]
 	rainbow_hcl(10)[c(1:10)]
+	brewer.pal(12,"Set3")
