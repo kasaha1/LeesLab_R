@@ -10,11 +10,20 @@ output: html_document
 
 
 ## You need three datasets to execute this code.
-1. trainingSet: gene signiture should have the first column as *'Symbol'* and the number should start from the second column.
-2. groupSet: This is the data divided by the group of samples in the tainingSet. You must have  *'sample','group'* column.
-3. testSet: should have the same structure as tainingSet.  
+1. trainingSet: gene signiture should have the first column as *'Symbol'* and the number should start from the second column.  
+![exmaple file](example_dataset/prediction_EBVtrainingSet.txt)
+![example dataset](Figures/predictionTrainingSet.jpg)
 
-You chose the group to train in the parameter. 
+
+2. groupSet: This is the data divided by the group of samples in the tainingSet. You must have  *'sample','group'* column.  
+![exmaple file](example_dataset/prediction_groupSet.txt)
+![example dataset](Figures/predictionGroup.jpg)
+
+3. testSet: should have the same structure as tainingSet.  
+![exmaple file](example_dataset/prediction_testSet.txt)
+![example dataset](Figures/testSet.jpg)
+
+You choose the group to train in the parameter. 
 You can choose whether to do run cross-validation.
 
 ```{r}
@@ -38,7 +47,8 @@ Do_cross_validation <- FALSE # you can choose "TRUE" or "FALSE"
 
 
 dir <- dirname(in.file_trainingDataset)
-dir.Out <- paste0(dir,"/output_prediction")
+in.file.name=unlist(strsplit(basename(in.file_trainingDataset),"\\.txt"))
+dir.Out <- paste0(dir,"/output_prediction_",in.file.name)
 
 library(dplyr)
 library(Amelia)
@@ -108,9 +118,12 @@ instPak (packages)
 
 # import data
 training.raw.data <- read_delim(in.file_trainingDataset,delim = "\t") %>%duplicateRemoverbySD()
+colnames(training.raw.data)[1] <- c("Symbol")
 
 training.raw.groupdata_in <- read_delim(in.file_group,delim = "\t")[c("sample","group")] 
+colnames(training.raw.groupdata_in)[c(1,2)] <- c("sample","group") %>% na.omit()
 test.raw.data <- read_delim(in.file_testDataset,delim = "\t") %>%duplicateRemoverbySD()
+colnames(test.raw.data)[1] <- c("Symbol")
 
 if (Do_median_centering) {
   training.raw.data <- training.raw.data %>% geneMedianCentering()

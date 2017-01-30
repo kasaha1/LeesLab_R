@@ -5,7 +5,18 @@ date: "2017년 1월 23일"
 output: html_document
 ---
 
-# Group data must have columns, "sample" & "group"
+# This code creates a gene signature with the group dataset already made. This code do supervised clustering.
+
+# The dataset must be txt file(tab deliminated) and has the first column as symbol. The numeric gene matrix must start from 2nd columns  
+
+![exmaple file](example_dataset/unsupervisedClustering_TCGA_sarcoma.txt)
+![example dataset](Figures/supervisedClustering.jpg)
+
+##  Group dataset must have the first column as sample list & the second column as group
+
+! [exmaple file](example_dataset/supervisedClustering_group_for_TCGA_sarcoma.txt)
+! [example dataset](example_dataset/groupDataset_supervisedClustering.jpg)  
+
 
 ```{r}
 #===================================================================
@@ -16,17 +27,19 @@ in.file_dataset <- file.choose()
 print("Choose the group data.....")
 in.file_group <- file.choose()
 
-Start.col <- 2 # the starting column of numeric data in dataset
+
 
 group_selected <- "A" 
-pValue_cutoff <- 0.001
-averageDifference <- 3
+pValue_cutoff <- 0.001 
+averageDifference <- 2 
 
 #===================================================================
 
+Start.col <- 2 # the starting column of numeric data in dataset
 
 dir     <- dirname(in.file_dataset)
-dirOut <- paste0(dir,"/output_superClustering")
+in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
+dirOut <- paste0(dir,"/output_superClustering_",in.file.name)
 
 ## To install Packages-------------
 instPak <- function(pkg){
@@ -107,7 +120,8 @@ instPak (packages)
 
 # import data
 raw.data <- read_delim(in.file_dataset,delim = "\t")
-raw.groupdata_in <- read_delim(in.file_group,delim = "\t")[c("sample","group")]
+raw.groupdata_in <- read_delim(in.file_group,delim = "\t")[c(1,2)] %>% na.omit()
+colnames(raw.groupdata_in)[c(1,2)] <- c("sample","group")
 if (Start.col>2) {raw.data_1 <-raw.data[-c(1:(Start.col-2))]} else {raw.data_1 <-raw.data }
 #-----------------------------------------===============-------------------
 
@@ -157,7 +171,6 @@ colnames(res.table) <- c("gene","average_d","t_test_p")
 # data filter by input
 
 filinterd_list <- res.table %>% filter(t_test_p < pValue_cutoff) %>% filter(abs(average_d)>averageDifference) %>% arrange(average_d)
-print(paste0("The ",nrow(filinterd_list)," were filtered of ",nrow(res.table),"......"))
 
 # join according to filtered list
 
@@ -227,6 +240,7 @@ dev.off()
 write_delim(x = flitered_table,path = file.path(dirOut,"table_supervisedClustering.txt"),delim = "\t")
 write_delim(x = raw.groupdata,path = file.path(dirOut,"groupDataRevised.txt"),delim = "\t")
 
+print(paste0("The ",nrow(filinterd_list)," were filtered of ",nrow(res.table),"genes ......"))
 
 ```
 

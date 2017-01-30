@@ -5,13 +5,21 @@ date: "2017년 1월 22일"
 output: html_document
 ---
 
+# This code unsupervised cluster your gene data. 
+
+## Your dataset must be txt file(tab deliminated) and has the first column as symbol. The numeric gene matrix must start from 2nd columns
+
+![exmaple file](example_dataset/unsupervisedClustering_TCGA_sarcoma.txt)
+  
+![example dataset](Figures/supervisedClustering.jpg)
+
 ```{r}
 #===================================================================
 # Properties: user input
 #-------------------------------------------------------------------
 in.file <- file.choose()
 
-Start.col <- 2
+
 tree_cut <- 3
 distanceOption <- "pearson"
 linkOption <- "average"
@@ -23,10 +31,11 @@ ABS_value <- 2
 SD_val <- 2
 
 #===================================================================
-
+Start.col <- 2
 
 dir     <- dirname(in.file)
-dirOut <- paste0(dir,"/output_clustering")
+in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
+dirOut <- paste0(dir,"/output_UnsuperviedClustering_",in.file.name)
 
 
 #====================================functions
