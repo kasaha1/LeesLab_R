@@ -5,7 +5,7 @@ date: "January 20, 2017"
 output: html_document
 ---
 
-# The two files to be merged must have a column named *"Symbol"*.
+# The two files to be merged must have the first column *"Symbol"*.
 
 ```{r}
 
@@ -38,7 +38,9 @@ instPak (packages)
 
 # Data import
 raw.data_1 <- read_delim(in.file_1,delim = "\t")
+colnames(raw.data_1)[1] <- c("Symbol")
 raw.data_2 <- read_delim(in.file_2,delim = "\t")
+colnames(raw.data_2)[1] <- c("Symbol")
 
 # data processing
 
