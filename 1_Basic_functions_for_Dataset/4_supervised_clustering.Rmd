@@ -9,12 +9,12 @@ output: html_document
 
 # The dataset must be txt file(tab deliminated) and has the first column as symbol. The numeric gene matrix must start from 2nd columns  
 
-![exmaple file](example_dataset/unsupervisedClustering_TCGA_sarcoma.txt)
+[exmaple file](example_dataset/unsupervisedClustering_TCGA_sarcoma.txt)  
 ![example dataset](Figures/supervisedClustering.jpg)
 
 ##  Group dataset must have the first column as sample list & the second column as group
 
-! [exmaple file](example_dataset/supervisedClustering_group_for_TCGA_sarcoma.txt)
+[exmaple file](example_dataset/supervisedClustering_group_for_TCGA_sarcoma.txt)  
 ! [example dataset](example_dataset/groupDataset_supervisedClustering.jpg)  
 
 
