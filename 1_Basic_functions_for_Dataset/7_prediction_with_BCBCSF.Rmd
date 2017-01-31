@@ -50,8 +50,42 @@ dir <- dirname(in.file_trainingDataset)
 in.file.name=unlist(strsplit(basename(in.file_trainingDataset),"\\.txt"))
 dir.Out <- paste0(dir,"/output_prediction_",in.file.name)
 
-library(dplyr)
-library(Amelia)
+
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+  install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","BCBCSF","dendextend","amap","gplots","corrplot","Amelia")
+instPak (packages) 
+#-----------------------------
+
+
+## To install Packages-------------Bioclite
+
+instPak_bioc <- function(pkg_b){
+  new.pkg <- pkg_b[!(pkg_b %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)){
+    source("https://bioconductor.org/biocLite.R")
+    biocLite(suppressUpdates=TRUE,suppressAutoUpdate=FALSE,ask=FALSE)
+    biocLite(pkg=pkg_b,suppressUpdates=TRUE, suppressAutoUpdate=FALSE,ask=FALSE)
+  }
+  sapply(pkg_b, require, character.only = TRUE)
+}
+
+#------------- Bioc_Packages ----
+packages_bioc <- c("limma", "ctc")
+instPak_bioc (packages_bioc)
+#-----------------------------
+
+
+
+
+
 ## Data cleaning---------------
 data_cleaning <- function(x){
   res <- list()
@@ -102,25 +136,12 @@ geneStandardization <- function(x){
   return(cbind(x[1],res.table_1))
 }
 
-## To install Packages-------------
-instPak <- function(pkg){
-  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
-  if (length(new.pkg)) 
-  install.packages(new.pkg, dependencies = TRUE)
-  sapply(pkg, require, character.only = TRUE)
-}
-
-#------------- Packages ----
-packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","BCBCSF","dendextend","amap","gplots","corrplot","ctc")
-instPak (packages) 
-#-----------------------------
-
-
 # import data
 training.raw.data <- read_delim(in.file_trainingDataset,delim = "\t") %>%duplicateRemoverbySD()
 colnames(training.raw.data)[1] <- c("Symbol")
+training.raw.data <- training.raw.data[!(is.na(training.raw.data$Symbol)),]
 
-training.raw.groupdata_in <- read_delim(in.file_group,delim = "\t")[c("sample","group")] 
+training.raw.groupdata_in <- read_delim(in.file_group,delim = "\t")
 colnames(training.raw.groupdata_in)[c(1,2)] <- c("sample","group") %>% na.omit()
 test.raw.data <- read_delim(in.file_testDataset,delim = "\t") %>%duplicateRemoverbySD()
 colnames(test.raw.data)[1] <- c("Symbol")

@@ -47,6 +47,33 @@ instPak <- function(pkg){
   sapply(pkg, require, character.only = TRUE)
 }
 
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","readr","colorspace","dendextend","amap","gplots","corrplot","Amelia")
+instPak (packages) 
+#-----------------------------
+
+
+## To install Packages-------------Bioclite
+
+instPak_bioc <- function(pkg_b){
+  new.pkg <- pkg_b[!(pkg_b %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)){
+    source("https://bioconductor.org/biocLite.R")
+    biocLite(suppressUpdates=TRUE,suppressAutoUpdate=FALSE,ask=FALSE)
+    biocLite(pkg=pkg_b,suppressUpdates=TRUE,suppressAutoUpdate=FALSE,ask=FALSE)
+  }
+  sapply(pkg_b, require, character.only = TRUE)
+}
+
+#------------- Bioc_Packages ----
+packages_bioc <- c("ctc")
+instPak_bioc (packages_bioc)
+#-----------------------------
+
+
+
+
+
 ## Data cleaning---------------
 data_cleaning <- function(x){
   res <- list()
@@ -111,11 +138,6 @@ geneFilterByABS <- function(x, AtLeastObservation=1, absVal=2){
   return(x[y_1,])
 }
 #======================================================
-#------------- Packages ----
-packages <- c("ggplot2", "dplyr", "reshape2","readr","colorspace","dendextend","amap","gplots","corrplot","ctc","Amelia")
-instPak (packages) 
-#-----------------------------
-
 
 # import data
 raw.data <- read_delim(in.file,delim = "\t")
