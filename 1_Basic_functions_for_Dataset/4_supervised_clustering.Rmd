@@ -49,7 +49,7 @@ instPak <- function(pkg){
   sapply(pkg, require, character.only = TRUE)
 }
 #------------- Packages ----
-packages <- c("ggplot2", "dplyr", "reshape2","readr","colorspace","dendextend","amap","gplots","corrplot","Amelia")
+packages <- c("ggplot2", "dplyr", "reshape2","readr","colorspace","dendextend","amap","gplots","corrplot","Amelia","RColorBrewer")
 instPak (packages) 
 #-----------------------------
 
@@ -203,8 +203,12 @@ flitered_table_medianCentering <- geneMedianCentering(flitered_table)
 data.clustering_heatmap <- flitered_table_medianCentering[-1]
 
 row.names(data.clustering_heatmap) <- t(flitered_table_medianCentering[1])
-strip_colors <- rainbow_hcl(length(levels(groupdata$group)))[as.numeric(groupdata$group)]
-
+col_number <- length(levels(groupdata$group))
+if(col_number <9 ){
+  strip_colors <- brewer.pal(8,"Dark2")[as.numeric(groupdata$group)]
+}else{
+  strip_colors <- rainbow_hcl(col_number)[as.numeric(groupdata$group)]
+}
 
 data_melted <- melt(data.clustering_heatmap,id.vars = 0)
 intensity_heatmap <- 0.30
@@ -228,7 +232,7 @@ heatmap.2(as.matrix(data.clustering_heatmap),
           density.info = "density",
           breaks=colors_break,
           #RowSideColors = strip_colors, # to add nice colored strips
-          #ColSideColors = strip_colors,
+          ColSideColors = strip_colors,
           col = my_palette,
           trace="none",
           cexRow = 0.3,

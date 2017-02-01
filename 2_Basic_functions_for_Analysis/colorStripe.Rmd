@@ -14,9 +14,11 @@ print("Choose the file")
 in.file <- file.choose() 
 directions <- "transverse"
 
+border_color <- "AUTO" # recomend "light gray" or TRUE or NA
+  
+#===================================================================  
 dir.in     <- dirname(in.file)
 dir.Out <- paste0(dir.in,"/output_colorStripe")
-#===================================================================
 
 ## To install Packages-------------
 instPak <- function(pkg){
@@ -30,13 +32,13 @@ rect_h <- function(col, border = "light gray"){ # Horizontal
   n <- length(col)
   plot(0, 0, type="n", xlim = c(0, 1), ylim = c(0, 1.5), axes = F, xlab = "", ylab = "")
   rect(0:(n-1)/n, 0, 1:n/n, 0.5, col = col, border = border)
-  legend(x = 0.8,y=0.8,legend = c(levels(raw.data$group)),fill = brewer.pal(9,"Set1")[1:n] )
+  legend(x = 0.8,y=0.8,legend = c(levels(raw.data$group)),fill = brewer.pal(8,"Dark2")[1:n] )
 }
 rect_v <- function(col, border = "light gray"){ # Horizontal
   n <- length(col)
   plot(0, 0, type="n", xlim = c(0,1.5), ylim = c(0, 1), axes = F, xlab = "", ylab = "")
   rect(0,0:(n-1)/n,0.5,1:n/n,col = col, border = border)
-  legend(x = 0.8,y=0.8,legend = c(levels(raw.data$group)),fill = brewer.pal(9,"Set1")[1:n] )
+  legend(x = 0.8,y=0.8,legend = c(levels(raw.data$group)),fill = brewer.pal(8,"Dark2")[1:n] )
 }
 
 #----------------------------------------
@@ -50,17 +52,23 @@ raw.data$group <- raw.data$group %>% as.character() %>% as.factor()
 
 n <- length(levels(raw.data$group))
 
+if (border_color=="AUTO"){
+  if (nrow(raw.data)>50){
+    border_col <-  NA
+  }else {border_col <-  "light gray"}
+} else { border_col <- border_col}
+
 
 if(!file.exists(dir.Out)) {dir.create(dir.Out)}
 
 if (directions=="transverse") {
   cairo_pdf(file.path(dir.Out,"colorbar.pdf"),width = 15, height = 10,pointsize = 12)
-  rect_h(brewer.pal(9,"Set1")[raw.data$group])
+  rect_h(brewer.pal(8,"Dark2")[raw.data$group],border = border_col)
   #rect_h(rainbow_hcl(n)[1:n][raw.data$group])
   #rect_h(c("#FF0000FF","#FF8000FF","#FFFF00FF","#FFFF80FF")[raw.data$group]) # color customize function
 } else{
   cairo_pdf(file.path(dir.Out,"colorbar.pdf"),width = 10, height = 15,pointsize = 12)
-  rect_v(brewer.pal(9,"Set1")[rev(raw.data$group)])
+  rect_v(brewer.pal(8,"Dark2")[rev(raw.data$group)],border = border_col)
 }
 dev.off()
 
