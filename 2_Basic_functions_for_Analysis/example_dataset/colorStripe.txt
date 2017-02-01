@@ -1,5 +1,5 @@
 ID	group
-1	A
+1	B
 2	A
 3	A
 4	A
@@ -9,7 +9,7 @@ ID	group
 8	A
 9	B
 10	B
-11	B
+11	exam
 12	B
 13	A
 14	A
