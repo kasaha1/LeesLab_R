@@ -39,7 +39,7 @@ rect_v <- function(col, border = "light gray"){ # Horizontal
 
 #----------------------------------------
 #------------- Packages ----
-packages <- c("colorspace","dplyr","readr")
+packages <- c("colorspace","dplyr","readr","RColorBrewer")
 instPak (packages)
 #-----------------------------
 raw.data <- read_delim(in.file,delim = "\t")
@@ -52,12 +52,11 @@ n <- length(levels(raw.data$group))
 if(!file.exists(dir.Out)) {dir.create(dir.Out)}
 cairo_pdf(file.path(dir.Out,"colorbar.pdf"),width = 15, height = 10,pointsize = 12)
 if (directions=="transverse") {
-  rect_h(rainbow_hcl(n)[1:n][raw.data$group])
+  rect_h(brewer.pal(9,"Set1")[raw.data$group])
   #rect_h(c("#FF0000FF","#FF8000FF","#FFFF00FF","#FFFF80FF")[raw.data$group]) # color customize function
 } else{
-  rect_v(rainbow_hcl(n)[1:n][rev(raw.data$group)])
+  rect_v(brewer.pal(9,"Set1")[rev(raw.data$group)])
 }
 dev.off()
 
 ```
-
