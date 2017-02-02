@@ -1,0 +1,278 @@
+---
+title: "ROC_multipleVar"
+author: "Kang sanghee"
+date: "February 2, 2017"
+output: html_document
+---
+```{r}
+
+library(readr)
+
+file.in <- file.choose()
+target_col <- 3
+var_col_start <- 7
+var_col_end <- 16
+
+########################################## function start #############################
+raw.data <- read_delim(file.in,delim = "\t")
+
+file.name <- basename(file.in)
+file.name <- unlist(strsplit(file.name,"\\.txt"))
+dir.name <- dirname(file.in)
+dir.out <- paste0(dir.name,"/output_",file.name)
+
+if (!dir.exists(dir.out)){dir.create(dir.out)}
+
+
+
+
+
+# Fri Jan 20 23:51:48 2017 ------------------------------
+
+
+# Reference by moonbook ROC curve
+
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+  install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","pROC","ztable","Epi")
+instPak (packages) 
+#-----------------------------
+
+myROC=function (test = NULL, stat = NULL, form = NULL, plot = c("sp", 
+                                                          "ROC"), PS = is.null(test), PV = TRUE, MX = TRUE, MI = TRUE, 
+          AUC = TRUE, grid = seq(0, 100, 10), col.grid = gray(0.9), 
+          cuts = NULL, lwd = 2, data = parent.frame(), ...) 
+{
+    rnam <- if (!missing(test)) 
+        deparse(substitute(test))
+    else "lr.eta"
+    if (is.null(form)) {
+        if (is.null(stat) | is.null(test)) 
+            stop("Either 'test' AND 'stat' OR 'formula' must be supplied!")
+        lr <- glm(stat ~ test, family = binomial)
+        resp <- stat
+        Model.inf <- paste("Model: ", deparse(substitute(stat)), 
+                           "~", deparse(substitute(test)))
+    }
+    else {
+        lr <- glm(form, family = binomial, data = data)
+        resp <- eval(parse(text = deparse(form[[2]])), envir = lr$model)
+        Model.inf <- paste("Model: ", paste(paste(form)[c(2, 
+                                                          1, 3)], collapse = " "))
+    }
+    m <- as.matrix(base::table(switch(PS + 1, test, lr$fit), 
+                               resp))
+    m <- addmargins(rbind(0, m), 2)
+    fv <- c(-Inf, sort(unique(switch(PS + 1, test, lr$fit))))
+    nr <- nrow(m)
+    m <- apply(m, 2, cumsum)
+    sns <- (m[nr, 2] - m[, 2])/m[nr, 2]
+    spc <- m[, 1]/m[nr, 1]
+    pvp <- m[, 2]/m[, 3]
+    pvn <- (m[nr, 1] - m[, 1])/(m[nr, 3] - m[, 3])
+    res <- data.frame(cbind(sns, spc, pvp, pvn, fv))
+    names(res) <- c("sens", "spec", "pvp", "pvn", rnam)
+    auc <- sum((res[-1, "sens"] + res[-nr, "sens"])/2 * abs(diff(1 -res[, "spec"])))
+    invisible(list(res = res, AUC = auc, lr = lr))
+}
+
+optimal_lr.eta=function(x){
+  no=which.max(x$res$sens+x$res$spec)[1]
+  result=x$res$lr.eta[no]
+  result
+}
+
+optimal_cutpoint=function(x){
+  y=optimal_lr.eta(x)
+  if(ncol(x$lr$model)==2){
+    b0=unname(x$lr$coeff[1])
+    b1=unname(x$lr$coeff[2])
+    result=(-log(1/y-1)-b0)/b1
+
+  }
+  else{
+    temp=fitted(x$lr)
+    no=which(temp==y)[1]
+    result=""
+    for(i in 2:ncol(x$lr$model)){
+      if(nchar(result)!=0) result=paste(result,",")   
+      result=paste(result,x$lr$model[no,i],sep="")
+    }
+
+  }
+  result
+} 
+
+plotROCcount<-1
+
+plot_ROC=function(x,y=NULL,z=NULL,type=0,col=c("black","red","blue"),
+                  lwd=2,
+                  show.points=TRUE,
+                  show.line=FALSE,
+                  show.lr.eta=TRUE,
+                  show.sens=TRUE,
+                  show.AUC=TRUE,
+                  main.title="")
+{
+
+  plotROCcount<<-1
+  plot(0:1,0:1,xlim=0:1,ylim=0:1,type="n",ylab="Sensitivity",
+       xlab="1-Specificity")
+  title(main.title)
+  if(type==1) rect(par("usr")[1],par("usr")[3],par("usr")[2],par("usr")[4],
+                   border=FALSE,col=gray(0.90))
+  abline(h=seq(0,1,0.1),col=ifelse(type,"white",gray(0.9)))
+  abline(v=seq(0,1,0.1),col=ifelse(type,"white",gray(0.9)))
+  if(!is.null(x)) add_plot_ROC(x,lwd=lwd,col=col[1],
+               show.points=show.points,show.line=show.line,
+               show.lr.eta=show.lr.eta,show.sens=show.sens,
+               show.AUC=show.AUC)
+  segments(0,0,1,1,lty=2)
+  if(!is.null(y)) add_plot_ROC(y,lwd=lwd,col=col[2],
+                               show.points=show.points,show.line=show.line,
+                               show.lr.eta=show.lr.eta,show.sens=show.sens,
+                               show.AUC=show.AUC)
+  if(!is.null(z)) add_plot_ROC(z,lwd=lwd,col=col[3],
+                               show.points=show.points,show.line=show.line,
+                               show.lr.eta=show.lr.eta,show.sens=show.sens,
+                               show.AUC=show.AUC)
+  if((!is.null(x)) & (!is.null(y)) & is.null(z)) {
+      if((ncol(x$lr$model)==2)&(ncol(y$lr$model)==2)) {
+          result=roc.test(ROC2roc(x),ROC2roc(y),plot=T)
+          if(result$p.value <0.001) {
+            temp="p < 0.001"
+          } else temp=paste("p = ",round(result$p.value,3),sep="")
+
+          text(0.45,plotROCcount*0.11-0.05,cex=0.8,pos=4,col=col,
+             paste("DeLong's test for two correlated ROC curves\n",
+                 "Z = ",round(result$statistic,3),", ",temp,sep=""))  
+      }
+  }  
+}
+
+add_plot_ROC=function(x,lwd=2,col="black",
+                      show.points=TRUE,
+                      show.line=FALSE,
+                      show.lr.eta=TRUE,
+                      show.sens=TRUE,
+                      show.AUC=TRUE)
+{
+  par(new=TRUE)
+  plot(x$res$sens~I(1-x$res$spec),type="l",lwd=lwd,axes=FALSE,
+       ylab="",xlab="",col=col)
+  max=max(x$res$sens+x$res$spec)
+  if(show.line) abline(max-1,1,col=col)
+  no=which.max(x$res$sens+x$res$spec)
+  xx=1-x$res$spec[no]
+  yy=x$res$sens[no]
+  if(show.points) points(xx,yy,pch=4,cex=2,col=col)
+  if(show.lr.eta) text(xx+0.01,yy+0.02,cex=0.7,pos=2,col=col,
+                       paste("lr.eta=",round(optimal_lr.eta(x),3),sep=""))
+  #segments(xx-0.01,yy+0.01,xx+0.04,yy-0.04)
+  if(show.sens)
+    text(xx+0.01,yy-0.09,cex=0.7,pos=4,col=col,
+         paste("Sens:",sprintf("%03.1f",x$res$sens[no]*100),"%\n",
+               "Spec:",sprintf("%03.1f",x$res$spec[no]*100),"%\n",
+               "PV+:",sprintf("%03.1f",x$res$pvp[no]*100),"%\n",
+               "PV-:",sprintf("%03.1f",x$res$pvn[no]*100),"%\n",
+               sep=""))
+  if(show.AUC) { 
+    legend=paste("Model: ",colnames(x$lr$model)[1],"~",
+                 paste(colnames(x$lr$model)[-1],collapse="+"),sep="")
+
+    cut=optimal_cutpoint(x)
+    if(is.numeric(cut)) cut=round(cut,3)
+    temp=round(x$AUC,3)
+    if(ncol(x$lr$model)==2){
+        ci=pROC::ci(ROC2roc(x))  
+        temp=paste(temp,"(",round(ci[1],3),"-",round(ci[3],3),")",sep="")
+        result=wilcox.test(x$lr$model[,2],x$lr$model[,1])
+        if(result$p.value<0.001) {
+          temp=paste(temp,", p < 0.001")
+        } else temp=paste(temp,", p =",round(result$p.value,3))
+    }
+
+    text(0.45,plotROCcount*0.11-0.05,cex=0.8,pos=4,col=col,
+         paste(legend,"\n",
+               "Optimal Cutoff value: ",cut,"\n",
+               "AUC: ",temp ))
+  }
+  plotROCcount<<-plotROCcount+1
+}
+
+step_ROC=function(formula,data,plot=TRUE,table=TRUE){
+    call=paste(deparse(formula),", ","data= ",substitute(data),sep="")
+    f=formula
+    myt=terms(f,data=data)
+    y=as.character(f[[2]])
+
+    myvar=attr(myt,"term.labels")
+    count=length(myvar)
+    mydf=data[y]   
+    for(i in 1:count) {
+      mydf=cbind(mydf,data[[myvar[i]]])
+      colnames(mydf)[i+1]=myvar[i]
+    }
+    mydf=na.omit(mydf)
+    #str(mydf)
+    result=glm(formula,data=mydf)
+    final=step(result)
+    x=ROC(form=formula,data=mydf,plot="")
+    #str(final$model)
+    x2=ROC(form=final$formula,data=mydf,plot="")
+    if(plot) plot_ROC(x,x2)
+    z=ztable(anova(x$lr,x2$lr,test="Chisq"))
+    result=list(initial=x,final=x2,table=z)
+    result
+
+}
+
+ROC2roc=function(x){
+    formula=x$lr$formula
+    data=x$lr$data
+    result=roc(formula,data,ci=T)
+    result
+}
+
+
+
+
+
+
+########################################## function end #############################
+
+ROC_data <- raw.data
+
+screen_division <- floor(sqrt(var_col_end-var_col_start))
+target_origianl <- colnames(ROC_data)[target_col]
+colnames(ROC_data)[target_col] <- "event"
+
+
+cairo_pdf(file.path(dir.out,"ROCplot.pdf"),width = 20, height = 20,pointsize = 20)
+
+par(mfrow=c(screen_division+1,screen_division))
+for(i in c(var_col_start:var_col_end)){
+
+var_originalanme <- colnames(ROC_data)[i]
+colnames(ROC_data)[i] <- "var_independent"
+main.title <- paste0(target_origianl," ~ ",var_originalanme)
+a1 <- ROC(form = event~var_independent, data = ROC_data,plot = F)
+
+
+plot_ROC(a1,show.lr.eta = F,main.title = main.title)
+colnames(ROC_data)[i] <- var_originalanme
+}
+par(mfrow=c(1,1))
+
+  
+dev.off()
+
+```
+
