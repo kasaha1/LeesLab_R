@@ -1,0 +1,42 @@
+---
+title: "Survival"
+author: "Kang sanghee"
+date: "February 2, 2017"
+output: html_document
+---
+
+```{r}
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+  install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace")
+instPak (packages) 
+#-----------------------------
+
+data.raw <- read_delim("C:/Users/SKang2/Desktop/Yim/KU46_RFS(All).txt", delim = "\t")
+
+library(survival)
+library(survminer)
+# fit #
+# fit <- survfit(Surv(RFS.m_update,RFS_update_GU==1) ~ 1, data = data.raw) # --> input variable
+fit <- survfit(Surv(RFS.m_update,RFS_update_GU==1) ~ Death_update, data = data.raw) # --> input variable
+# survival rate #
+# survivalRate <- summary(fit,times = 30) # 30--> periodes
+# as.character(survivalRate[1])
+# as.numeric(survivalRate[1])
+# as.character(survivalRate[2])
+# as.numeric(survivalRate[2])
+# p value #
+# fit_differ <- survdiff(Surv(time_var,status_var==1)~ strata(def:1), data = raw.data)
+# p.val <- 1 - pchisq(fit_differ$chisq, length(fit_differ$n) - 1)
+# graph #
+ggsurvplot(fit,conf.int = FALSE,ylab = "Development of HCC",risk.table = TRUE,fun = "event",break.time.by = 12,pval = F)
+
+```
+
