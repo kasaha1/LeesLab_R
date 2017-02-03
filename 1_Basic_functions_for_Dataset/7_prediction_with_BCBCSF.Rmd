@@ -27,6 +27,7 @@ You choose the group to train in the parameter.
 You can choose whether to do run cross-validation.
 
 ```{r}
+
 #===================================================================
 # Properties: user input
 #-------------------------------------------------------------------
@@ -37,10 +38,10 @@ in.file_group <- file.choose()
 print("Choose the testSet")
 in.file_testDataset <- file.choose()
 
-group_selected <- "EBV" 
+group_selected <- "EBV"
 
-Do_median_centering <- FALSE
-Do_divid_by_STD <- FALSE
+Do_median_centering <- F
+Do_divid_by_STD <- F
 
 Do_cross_validation <- FALSE # you can choose "TRUE" or "FALSE"
 #===================================================================
@@ -48,20 +49,20 @@ Do_cross_validation <- FALSE # you can choose "TRUE" or "FALSE"
 
 dir <- dirname(in.file_trainingDataset)
 in.file.name=unlist(strsplit(basename(in.file_trainingDataset),"\\.txt"))
-dir.Out <- paste0(dir,"/output_prediction_",in.file.name)
+dir.Out <- paste0(dir,"/output_prediction_",in.file.name,"_",group_selected)
 
 
 ## To install Packages-------------
 instPak <- function(pkg){
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
-  if (length(new.pkg)) 
-  install.packages(new.pkg, dependencies = TRUE)
+  if (length(new.pkg))
+    install.packages(new.pkg, dependencies = TRUE)
   sapply(pkg, require, character.only = TRUE)
 }
 
 #------------- Packages ----
 packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","BCBCSF","dendextend","amap","gplots","corrplot","Amelia")
-instPak (packages) 
+instPak (packages)
 #-----------------------------
 
 
@@ -124,14 +125,14 @@ matrixTranspositionXY <- function(x, firstColumnName="sample"){
 ## Median centering------------------
 geneMedianCentering <- function(x){
   raw.data <- x[-1] %>% as.matrix()
-  median.table <- apply(raw.data ,c(1),median,na.rm = T) 
+  median.table <- apply(raw.data ,c(1),median,na.rm = T)
   median_centered <- raw.data-median.table
-return(cbind(x[1],median_centered))
+  return(cbind(x[1],median_centered))
 }
 ## Standardization-------------
 geneStandardization <- function(x){
   raw.data <- x[-1] %>% as.matrix()
-  sd.table <- apply(raw.data,1,sd,na.rm = T) 
+  sd.table <- apply(raw.data,1,sd,na.rm = T)
   res.table_1 <- raw.data/sd.table # divided by standard deviation
   return(cbind(x[1],res.table_1))
 }
@@ -187,29 +188,31 @@ groupSet <- join_dataset[c(1,(ncol(trainingSet_t)+1):ncol(join_dataset))]
 
 # write datset for BCCP
 BCCPset_training_g <- groupSet
-BCCPset_training_g$group_name <- BCCPset_training_g$sample
-BCCPset_training_g$group_name[BCCPset_training_g$group == 1] <- paste0("S_",BCCPset_training_g$sample)
-BCCPset_training_g$group_name[BCCPset_training_g$group == 2] <- paste0("z_",BCCPset_training_g$sample)
+BCCPset_training_g$group_name <- BCCPset_training_g$sample %>% as.character()
+BCCPset_training_g$group[BCCPset_training_g$group == "1"] <- "S_"
+BCCPset_training_g$group[BCCPset_training_g$group == "2"] <- "z_"
+BCCPset_training_g$group_name <- paste0(BCCPset_training_g$group,BCCPset_training_g$sample)
+
 BCCPset_training <- cbind(BCCPset_training_g[-c(1,2)],trainingSet_t)[-c(2)] %>% arrange(group_name) %>% matrixTranspositionXY()
 BCCPset_training_testset <- inner_join(BCCPset_training,testSet,by=c("sample"="Symbol"))
 colnames(BCCPset_training_testset)[1] <- "geneSymbol"
 ####################### BCBCSF -------------------
 ## training data
 X_tr <- trainingSet_t[-1] %>% as.matrix()
-y_tr <- groupSet$group 
-## test data 
+y_tr <- groupSet$group
+## test data
 X_ts <- testSet_t[-1] %>% as.matrix()
 y_ts <- testSet_t[1]
 
 ##########################################################################
 ######################## training and prediction #########################
 ##########################################################################
-## fitting training data with top features selected by F-statistic 
+## fitting training data with top features selected by F-statistic
 out_fit <- bcbcsf_fitpred (X_tr = X_tr, y_tr = y_tr, nos_fsel = c(ncol(X_tr)))
 ## note 1: if 'X_ts' is given above, prediction is made after fitting
 ## note 2: no_rmc = 100 is too small, omit it and use the default
 
-## predicting class labels of test cases 
+## predicting class labels of test cases
 out_pred <- bcbcsf_pred (X_ts = X_ts, out_fit = out_fit)
 
 
@@ -240,39 +243,39 @@ sum_fit <- bcbcsf_sumfit (fit_bcbcsf)
 
 ## visualize fitting result
 png(file.path(dir.Out,"summary.png"),width = 700, height = 500,pointsize = 12, bg = "white")
-  bcbcsf_plotsumfit (sum_fit)
+bcbcsf_plotsumfit (sum_fit)
 dev.off()
 
 
 if(Do_cross_validation){
-##########################################################################
-############################ cross validation ############################
-##########################################################################
-## doing cross validation with bcbcsf_fitpred on lymphoma data 
-cv_pred <- cross_vld (
-  ##################### classifier, data, and fold ###################
-  fitpred_func = bcbcsf_fitpred, X = X_tr, y = y_tr, 
-  ################ all other arguments passed classifier ############
-  nos_fsel = c(ncol(X_tr)))
-## note: no_rmc = 100 is too small, omit it and use the default in practice
+  ##########################################################################
+  ############################ cross validation ############################
+  ##########################################################################
+  ## doing cross validation with bcbcsf_fitpred on lymphoma data
+  cv_pred <- cross_vld (
+    ##################### classifier, data, and fold ###################
+    fitpred_func = bcbcsf_fitpred, X = X_tr, y = y_tr,
+    ################ all other arguments passed classifier ############
+    nos_fsel = c(ncol(X_tr)))
+  ## note: no_rmc = 100 is too small, omit it and use the default in practice
 
-## evaluate prediction given true labels            
-validation <- eval_pred (out_pred = cv_pred, y_ts = y_tr)   
-val_probs_at_truelabels <- validation$probs_at_truelabels %>% as.data.frame()
-val_probs_at_truelabels <- cbind(groupSet,val_probs_at_truelabels)
-val_probs_at_truelabels$group[val_probs_at_truelabels$group=="1"] <- group_selected
-val_probs_at_truelabels$group[val_probs_at_truelabels$group=="2"] <- "others"
-colnames(val_probs_at_truelabels)[3] <- "probability_at_truelabels"
-val_summary <- validation$summary
+  ## evaluate prediction given true labels
+  validation <- eval_pred (out_pred = cv_pred, y_ts = y_tr)
+  val_probs_at_truelabels <- validation$probs_at_truelabels %>% as.data.frame()
+  val_probs_at_truelabels <- cbind(groupSet,val_probs_at_truelabels)
+  val_probs_at_truelabels$group[val_probs_at_truelabels$group=="1"] <- group_selected
+  val_probs_at_truelabels$group[val_probs_at_truelabels$group=="2"] <- "others"
+  colnames(val_probs_at_truelabels)[3] <- "probability_at_truelabels"
+  val_summary <- validation$summary
 
-write_delim(x = val_probs_at_truelabels,path = file.path(dir.Out,"crossVaildation.txt"),delim = "\t")
-write_delim(x = val_summary,path = file.path(dir.Out,"crossVaildation_summary.txt"),delim = "\t")
-# AMLP: minus average log probabilities at true labels, often called "deviation"
+  write_delim(x = val_probs_at_truelabels,path = file.path(dir.Out,"crossVaildation.txt"),delim = "\t")
+  write_delim(x = val_summary,path = file.path(dir.Out,"crossVaildation_summary.txt"),delim = "\t")
+  # AMLP: minus average log probabilities at true labels, often called "deviation"
 
 
-## warning: this function is slow if nfold is large; if you have a 
-## computer cluster, you better parallel the cross validation folds.
-##
+  ## warning: this function is slow if nfold is large; if you have a
+  ## computer cluster, you better parallel the cross validation folds.
+  ##
 }
 ############# HEATMAP FOR RESULT
 # grouping
@@ -286,6 +289,9 @@ groupdata$group <- as.factor(groupdata$group )
 a_group <- groupdata %>% filter(group==levels(groupdata$group)[1])
 b_group <- groupdata %>% filter(group==levels(groupdata$group)[2])
 
+if (nrow(a_group)==0 | nrow(b_group)==0){
+  print("Heatmap can not be drawn, because there is only one group")
+}else {
 data.process_1_a <- inner_join(a_group,data.process_1,by=c("sample"="sample"))[-2] %>% matrixTranspositionXY()
 data.process_1_b <- inner_join(b_group,data.process_1,by=c("sample"="sample"))[-2] %>% matrixTranspositionXY()
 
@@ -295,8 +301,8 @@ res.table <- matrix(nrow = 1,ncol = 1)
 data.process_1_a_m <- data.process_1_a[c(2:ncol(data.process_1_a))] %>% as.matrix()
 data.process_1_b_m <- data.process_1_b[c(2:ncol(data.process_1_b))] %>% as.matrix()
 for (i in 1:nrow(data.process_1_a)) {
-  k_1 <- data.process_1_a_m[i,] 
-  k_2 <- data.process_1_b_m[i,] 
+  k_1 <- data.process_1_a_m[i,]
+  k_2 <- data.process_1_b_m[i,]
   average_d <- mean(k_1,na.rm = T)-mean(k_2,na.rm = T)
   # t_p <- t.test(k_1,k_2)
   # t_p <- t_p$p.value
@@ -336,7 +342,7 @@ heatmap.2(as.matrix(data.clustering_heatmap),
           dendrogram = "none",
           Rowv = F,
           Colv = F, # this to make sure the columns are not ordered
-          # margins =c(5,0.1),     
+          # margins =c(5,0.1),
           # key.xlab = "Cm",
           # denscol = "grey",
           density.info = "density",
@@ -358,7 +364,7 @@ heatmap.2(as.matrix(data.clustering_heatmap),
           dendrogram = "none",
           Rowv = F,
           Colv = F, # this to make sure the columns are not ordered
-          # margins =c(5,0.1),     
+          # margins =c(5,0.1),
           # key.xlab = "Cm",
           # denscol = "grey",
           density.info = "density",
@@ -371,6 +377,7 @@ heatmap.2(as.matrix(data.clustering_heatmap),
           symm=F,symkey=F,symbreaks=T, scale="none"
 )
 dev.off()
+}
 write_delim(x = flitered_table,path = file.path(dir.Out,"2_table_supervisedClustering.txt"),delim = "\t")
 write_delim(x = BCCPset_training_testset,path = file.path(dir.Out,"3_table_ForBCCP.txt"),delim = "\t")
 
