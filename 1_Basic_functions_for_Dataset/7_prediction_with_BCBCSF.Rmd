@@ -408,8 +408,9 @@ heatmap.2(as.matrix(data.clustering_heatmap),
           symm=F,symkey=F,symbreaks=T, scale="none"
 )
 dev.off()
-}
+
 write_delim(x = flitered_table,path = file.path(dir.Out,"2_table_supervisedClustering.txt"),delim = "\t")
+}
 write_delim(x = BCCPset_training_testset,path = file.path(dir.Out,"3_table_ForBCCP.txt"),delim = "\t")
 
 
