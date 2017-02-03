@@ -185,6 +185,14 @@ join_dataset <- inner_join(trainingSet_t,groupSet,by=c("sample"="sample"))
 trainingSet_t <- join_dataset[1:ncol(trainingSet_t)]
 groupSet <- join_dataset[c(1,(ncol(trainingSet_t)+1):ncol(join_dataset))]
 
+# write datset for BCCP
+BCCPset_training_g <- groupSet
+BCCPset_training_g$group_name <- BCCPset_training_g$sample
+BCCPset_training_g$group_name[BCCPset_training_g$group == 1] <- paste0("S_",BCCPset_training_g$sample)
+BCCPset_training_g$group_name[BCCPset_training_g$group == 2] <- paste0("z_",BCCPset_training_g$sample)
+BCCPset_training <- cbind(BCCPset_training_g[-c(1,2)],trainingSet_t)[-c(2)] %>% arrange(group_name) %>% matrixTranspositionXY()
+BCCPset_training_testset <- inner_join(BCCPset_training,testSet,by=c("sample"="Symbol"))
+colnames(BCCPset_training_testset)[1] <- "geneSymbol"
 ####################### BCBCSF -------------------
 ## training data
 X_tr <- trainingSet_t[-1] %>% as.matrix()
@@ -364,7 +372,7 @@ heatmap.2(as.matrix(data.clustering_heatmap),
 )
 dev.off()
 write_delim(x = flitered_table,path = file.path(dir.Out,"2_table_supervisedClustering.txt"),delim = "\t")
-
+write_delim(x = BCCPset_training_testset,path = file.path(dir.Out,"3_table_ForBCCP.txt"),delim = "\t")
 
 
 ```
