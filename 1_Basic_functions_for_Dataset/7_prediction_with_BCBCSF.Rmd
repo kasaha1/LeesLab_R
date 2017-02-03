@@ -20,11 +20,15 @@ output: html_document
 ![example dataset](Figures/predictionGroup.jpg)
 
 3. testSet: should have the same structure as tainingSet.  
+
 [exmaple file](example_dataset/prediction_testSet.txt)  
 ![example dataset](Figures/testSet.jpg)
 
+
 You choose the group to train in the parameter. 
 You can choose whether to do run cross-validation.
+The missing value will be replaced by the median value
+
 
 ```{r}
 
@@ -40,8 +44,8 @@ in.file_testDataset <- file.choose()
 
 group_selected <- "EBV"
 
-Do_median_centering <- F
-Do_divid_by_STD <- F
+Do_median_centering <- T
+Do_divid_by_STD <- T
 
 Do_cross_validation <- FALSE # you can choose "TRUE" or "FALSE"
 #===================================================================
@@ -82,7 +86,6 @@ instPak_bioc <- function(pkg_b){
 packages_bioc <- c("limma", "ctc")
 instPak_bioc (packages_bioc)
 #-----------------------------
-
 
 
 
@@ -136,22 +139,50 @@ geneStandardization <- function(x){
   res.table_1 <- raw.data/sd.table # divided by standard deviation
   return(cbind(x[1],res.table_1))
 }
+transform_na_to_median <- function(x) {
+  raw.data <- x[-1] %>% as.matrix()
+  for (i in c(1:nrow(x))){
+    temp.row <- raw.data[i,]
+    median.temp <- median(temp.row,na.rm = T)
+    raw.data[i,is.na(raw.data[i,])] <- median.temp
+  }
+  res <- cbind(x[c(1)],raw.data)
+  return (res)
+}
+
 
 # import data
 training.raw.data <- read_delim(in.file_trainingDataset,delim = "\t") %>%duplicateRemoverbySD()
 colnames(training.raw.data)[1] <- c("Symbol")
 training.raw.data <- training.raw.data[!(is.na(training.raw.data$Symbol)),]
-
 training.raw.groupdata_in <- read_delim(in.file_group,delim = "\t")
 colnames(training.raw.groupdata_in)[c(1,2)] <- c("sample","group") %>% na.omit()
 test.raw.data <- read_delim(in.file_testDataset,delim = "\t") %>%duplicateRemoverbySD()
 colnames(test.raw.data)[1] <- c("Symbol")
+test.raw.data <- test.raw.data[!(is.na(training.raw.data$Symbol)),]
 
+# Na to median
+
+trainig_matrix_pre <- training.raw.data[-c(1)] %>% as.matrix()
+test_matrix_pre <- test.raw.data[-c(1)] %>% as.matrix()
+if (sum(is.na(trainig_matrix_pre)>0)){
+  training.raw.data <- training.raw.data %>% transform_na_to_median
+  print("Training set has NA cells. It is changed to median value")
+}
+x <- test.raw.data
+if (sum(is.na(test_matrix_pre)>0)){
+  test.raw.data <- test.raw.data %>% transform_na_to_median
+  print("Test set has NA cells. It is changed to median value")
+}
+
+# median centering
 if (Do_median_centering) {
   training.raw.data <- training.raw.data %>% geneMedianCentering()
   test.raw.data <- test.raw.data %>% geneMedianCentering()
   print("Two datasets are Median centered.........")
 }
+
+# standardization
 if (Do_divid_by_STD) {
   training.raw.data <- training.raw.data %>% geneStandardization()
   test.raw.data <- test.raw.data %>% geneStandardization()
@@ -380,6 +411,7 @@ dev.off()
 }
 write_delim(x = flitered_table,path = file.path(dir.Out,"2_table_supervisedClustering.txt"),delim = "\t")
 write_delim(x = BCCPset_training_testset,path = file.path(dir.Out,"3_table_ForBCCP.txt"),delim = "\t")
+
 
 
 ```
