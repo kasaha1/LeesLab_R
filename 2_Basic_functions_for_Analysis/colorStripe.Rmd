@@ -14,7 +14,7 @@ print("Choose the file")
 in.file <- file.choose() 
 directions <- "transverse"
 
-border_color <- "AUTO" # recomend "light gray" or TRUE or NA
+border_color <- "AUTO" # recomend "light gray" or TRUE or NA or "AUTI"
   
 #===================================================================  
 dir.in     <- dirname(in.file)
