@@ -19,6 +19,9 @@ dir.in <- dirname(in.file)
 dir.out <- paste0(dir.in,"/output_standardization")
 #===================================================================
 
+#is.NAN
+is.nan.data.frame <- function(x){
+do.call(cbind, lapply(x, is.nan))}
 
 ## To install Packages-------------
 instPak <- function(pkg){
@@ -47,7 +50,7 @@ if (dividedBySTD) {
   sd.table <- apply(res.table,1,sd,na.rm = T) 
   res.table_1 <- res.table/sd.table # divided by standard deviation
   result.table <- cbind(raw.data[1:(start.col-1)],res.table_1)
-  
+  result.table[is.nan(result.table)] <- 0
   # output
   
   in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
