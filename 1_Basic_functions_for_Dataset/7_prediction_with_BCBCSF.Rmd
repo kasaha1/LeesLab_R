@@ -182,11 +182,18 @@ if (Do_median_centering) {
   print("Two datasets are Median centered.........")
 }
 
-# standardization
-if (Do_divid_by_STD) {
-  training.raw.data <- training.raw.data %>% geneStandardization()
-  test.raw.data <- test.raw.data %>% geneStandardization()
-  print("Two datasets are standardized.........")
+#is.NAN
+is.nan.data.frame <- function(x){
+do.call(cbind, lapply(x, is.nan))}
+
+## Standardization-------------
+geneStandardization <- function(x){
+  raw.data <- x[-1] %>% as.matrix()
+  sd.table <- apply(raw.data,1,sd,na.rm = T)
+  res.table_1 <- raw.data/sd.table # divided by standard deviation
+  res <- cbind(x[1],res.table_1)
+  res[is.nan(res)] <- 0
+  return(res)
 }
 
 
