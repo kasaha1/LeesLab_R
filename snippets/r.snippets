@@ -195,3 +195,40 @@ snippet myColors
 	colorpal(10)[c(1:10)]
 	rainbow_hcl(10)[c(1:10)]
 	brewer.pal(12,"Set3")
+
+snippet myGeneFunctions
+	# Median centering------------------
+	geneMedianCentering <- function(x){
+	raw.data <- x[-1] %>% as.matrix()
+	median.table <- apply(raw.data ,c(1),median,na.rm = T)
+	median_centered <- raw.data-median.table
+	return(cbind(x[1],median_centered))
+	}
+	
+	# Transfomr_NA_to_Median
+	transform_na_to_median <- function(x) {
+	raw.data <- x[-1] %>% as.matrix()
+	for (i in c(1:nrow(x))){
+	temp.row <- raw.data[i,]
+	median.temp <- median(temp.row,na.rm = T)
+	raw.data[i,is.na(raw.data[i,])] <- median.temp
+	}
+	res <- cbind(x[c(1)],raw.data)
+	return (res)
+	}
+	
+	# Standardization-------------
+	## is.NAN function
+	is.nan.data.frame <- function(x){
+	do.call(cbind, lapply(x, is.nan))}
+	
+	geneStandardization <- function(x){
+	raw.data <- x[-1] %>% as.matrix()
+	sd.table <- apply(raw.data,1,sd,na.rm = T)
+	res.table_1 <- raw.data/sd.table # divided by standard deviation
+	res <- cbind(x[1],res.table_1)
+	res[is.nan(res)] <- 0
+	return(res)
+	}
+	
+	
