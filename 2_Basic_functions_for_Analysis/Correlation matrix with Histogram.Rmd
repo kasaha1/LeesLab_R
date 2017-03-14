@@ -8,7 +8,7 @@ output: html_document
 
 First, load the functions and execute as follows.
 
-pairs(*dataframe*,lower.panel=panel.smooth, upper.panel=panel.cor,diag.panel=panel.hist)
+### pairs(*dataframe*,lower.panel=panel.smooth, upper.panel=panel.cor,diag.panel=panel.hist)
 
 ```{r}
 # functions
