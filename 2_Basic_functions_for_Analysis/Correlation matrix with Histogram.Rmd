@@ -16,7 +16,7 @@ panel.cor <- function(x, y, digits=2, cex.cor)
 {
   usr <- par("usr"); on.exit(par(usr))
   par(usr = c(0, 1, 0, 1))
-  r <- abs(cor(x, y))
+  r <- cor(x, y)
   txt <- format(c(r, 0.123456789), digits=digits)[1]
   test <- cor.test(x,y)
   Signif <- ifelse(round(test$p.value,3)<0.001,"p<0.001",paste("p=",round(test$p.value,3)))  
