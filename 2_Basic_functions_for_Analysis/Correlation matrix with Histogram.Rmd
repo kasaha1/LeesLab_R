@@ -4,6 +4,8 @@ author: "Kang sanghee"
 date: "March 14, 2017"
 output: html_document
 ---
+![Product example](example_dataset/Figures/Colon adenocarcinoma.png)
+
 # How to use
 
 First, load the functions and execute as follows.

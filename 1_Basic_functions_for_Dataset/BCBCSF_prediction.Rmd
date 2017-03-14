@@ -1,0 +1,297 @@
+---
+title: "BCBCSF_prediction"
+author: "Kang sanghee"
+date: "March 14, 2017"
+output: html_document
+---
+# This is the code for _the only BCBCSF prediction._ BCBCSF performs prediction based on Bayes statistics. For more information, please see the link below.
+
+[Li, L. (2012), Bias-corrected Hierarchical Bayesian Classification with a Selected Subset of High-dimensional Features, Journal of American Statistical Association,107:497,120-134](http://amstat.tandfonline.com/doi/abs/10.1198/jasa.2011.ap10446)
+
+The prepared datasets are the same with 7_prediction_with_BCBCSF. But the predict groups may be greater than 2.
+
+```{r}
+
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+print("Choose the trainingSet.......")
+in.file_trainingDataset <- file.choose()
+print("Choose the groupSet.....")
+in.file_group <- file.choose()
+print("Choose the testSet")
+in.file_testDataset <- file.choose()
+
+
+Do_median_centering <- T
+Do_divid_by_STD <- T
+
+Do_cross_validation <- FALSE # you can choose "TRUE" or "FALSE"
+#===================================================================
+
+
+dir <- dirname(in.file_trainingDataset)
+in.file.name=unlist(strsplit(basename(in.file_trainingDataset),"\\.txt"))
+dir.Out <- paste0(dir,"/prediction_output_",in.file.name)
+
+
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg))
+    install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","BCBCSF","dendextend","amap","gplots","corrplot","Amelia")
+instPak (packages)
+#-----------------------------
+
+
+## To install Packages-------------Bioclite
+
+instPak_bioc <- function(pkg_b){
+  new.pkg <- pkg_b[!(pkg_b %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)){
+    source("https://bioconductor.org/biocLite.R")
+    biocLite(suppressUpdates=TRUE,suppressAutoUpdate=FALSE,ask=FALSE)
+    biocLite(pkg=pkg_b,suppressUpdates=TRUE, suppressAutoUpdate=FALSE,ask=FALSE)
+  }
+  sapply(pkg_b, require, character.only = TRUE)
+}
+
+#------------- Bioc_Packages ----
+packages_bioc <- c("limma", "ctc")
+instPak_bioc (packages_bioc)
+#-----------------------------
+
+
+
+#------------------------- Functions ---------------------------------
+
+## Data cleaning---------------
+data_cleaning <- function(x){
+  res <- list()
+  res$classes <- sapply(x,function(y) class(y))
+  res$na<- sapply(x,function(y) sum(is.na(y)))
+  res$unique <- sapply(x, function(y) length(unique(y)))
+  res$dulplicated <- sapply(x, function(y) sum(duplicated(y)))
+  res$map <- missmap(x, main = "Missing values vs observed")
+  return(res)
+}
+## duplication removal by SD----------------------
+duplicateRemoverbySD <- function(x){
+  matrix_data <- as.matrix(x[-1])
+  sd <- apply(matrix_data,1,sd)
+  order_num <- seq(1:nrow(x))
+  transformed <- cbind(order_num,sd,x)
+  name_3 <- colnames(transformed)[3]
+  colnames(transformed)[3] <- "grouped"
+  res <- transformed %>% arrange(desc(sd)) %>% group_by(grouped) %>% filter(row_number()==1) %>% ungroup() %>% arrange(order_num)
+  colnames(res)[3] <- name_3
+  return(res[c(-1,-2)])
+}
+## Transpostion XY----------------
+matrixTranspositionXY <- function(x, firstColumnName="sample"){
+  col_names_1 <- t(x[1])
+  raw_data <- t(x[-1])
+  colnames(raw_data) <- col_names_1
+  raw_data <- as.data.frame(raw_data)
+  row_name_1 <- row.names(raw_data)
+  raw_data <- cbind(row_name_1,raw_data)
+  row.names(raw_data) <- NULL
+  colnames(raw_data)[1] <- firstColumnName
+  raw_data[,1] <- as.character(raw_data[,1])
+  return(raw_data)
+}
+## Median centering------------------
+geneMedianCentering <- function(x){
+  raw.data <- x[-1] %>% as.matrix()
+  median.table <- apply(raw.data ,c(1),median,na.rm = T)
+  median_centered <- raw.data-median.table
+  return(cbind(x[1],median_centered))
+}
+# NA_to_median
+transform_na_to_median <- function(x) {
+  raw.data <- x[-1] %>% as.matrix()
+  for (i in c(1:nrow(x))){
+    temp.row <- raw.data[i,]
+    median.temp <- median(temp.row,na.rm = T)
+    raw.data[i,is.na(raw.data[i,])] <- median.temp
+  }
+  res <- cbind(x[c(1)],raw.data)
+  return (res)
+}
+
+#is.NAN
+is.nan.data.frame <- function(x){
+do.call(cbind, lapply(x, is.nan))}
+
+## Standardization-------------
+geneStandardization <- function(x){
+  raw.data <- x[-1] %>% as.matrix()
+  sd.table <- apply(raw.data,1,sd,na.rm = T)
+  res.table_1 <- raw.data/sd.table # divided by standard deviation
+  res <- cbind(x[1],res.table_1)
+  res[is.nan(res)] <- 0
+  return(res)
+}
+
+
+#------------------------------------------------------------
+
+
+# import data
+training.raw.data <- read_delim(in.file_trainingDataset,delim = "\t") %>%duplicateRemoverbySD()
+colnames(training.raw.data)[1] <- c("Symbol")
+training.raw.data <- training.raw.data[!(is.na(training.raw.data$Symbol)),]
+training.raw.groupdata_in <- read_delim(in.file_group,delim = "\t")
+colnames(training.raw.groupdata_in)[c(1,2)] <- c("sample","group") %>% na.omit()
+
+test.raw.data <- read_delim(in.file_testDataset,delim = "\t") %>%duplicateRemoverbySD()
+colnames(test.raw.data)[1] <- c("Symbol")
+test.raw.data <- test.raw.data[!(is.na(training.raw.data$Symbol)),]
+
+# Na to median
+
+trainig_matrix_pre <- training.raw.data[-c(1)] %>% as.matrix()
+test_matrix_pre <- test.raw.data[-c(1)] %>% as.matrix()
+if (sum(is.na(trainig_matrix_pre)>0)){
+  training.raw.data <- training.raw.data %>% transform_na_to_median
+  print("Training set has NA cells. It is changed to median value")
+}
+x <- test.raw.data
+if (sum(is.na(test_matrix_pre)>0)){
+  test.raw.data <- test.raw.data %>% transform_na_to_median
+  print("Test set has NA cells. It is changed to median value")
+}
+
+# median centering
+if (Do_median_centering) {
+  training.raw.data <- training.raw.data %>% geneMedianCentering()
+  test.raw.data <- test.raw.data %>% geneMedianCentering()
+  print("Two datasets are Median centered.........")
+}
+
+# standardization
+if (Do_divid_by_STD) {
+  training.raw.data <- training.raw.data %>% geneStandardization()
+  test.raw.data <- test.raw.data %>% geneStandardization()
+  print("Two datasets are Standardized.........")
+}
+
+
+raw.groupdata <- training.raw.groupdata_in
+raw.groupdata$group <- as.character(raw.groupdata$group) 
+group.list <- levels(as.factor(raw.groupdata$group ))
+raw.groupdata$group <- raw.groupdata$group %>% as.factor %>% as.numeric
+
+# data merging
+
+join_dataset <- inner_join(training.raw.data,test.raw.data,by=c("Symbol"="Symbol"))
+trainingSet <- join_dataset[1:ncol(training.raw.data)]
+testSet <- join_dataset[c(1,(ncol(training.raw.data)+1):ncol(join_dataset))]
+groupSet <- raw.groupdata
+
+# data processing
+trainingSet_t <- trainingSet %>% matrixTranspositionXY()
+testSet_t <- testSet %>% matrixTranspositionXY()
+
+join_dataset <- inner_join(trainingSet_t,groupSet,by=c("sample"="sample"))
+trainingSet_t <- join_dataset[1:ncol(trainingSet_t)]
+groupSet <- join_dataset[c(1,(ncol(trainingSet_t)+1):ncol(join_dataset))]
+
+####################### BCBCSF -------------------
+## training data
+X_tr <- trainingSet_t[-1] %>% as.matrix()
+y_tr <- groupSet$group
+## test data
+X_ts <- testSet_t[-1] %>% as.matrix()
+y_ts <- testSet_t[1]
+
+##########################################################################
+######################## training and prediction #########################
+##########################################################################
+## fitting training data with top features selected by F-statistic
+out_fit <- bcbcsf_fitpred (X_tr = X_tr, y_tr = y_tr, nos_fsel = c(ncol(X_tr)))
+## note 1: if 'X_ts' is given above, prediction is made after fitting
+## note 2: no_rmc = 100 is too small, omit it and use the default
+
+## predicting class labels of test cases
+out_pred <- bcbcsf_pred (X_ts = X_ts, out_fit = out_fit)
+
+
+
+# result write
+if(!file.exists(dir.Out))dir.create(dir.Out)
+
+res <- out_pred$array_probs_pred %>% as.data.frame() # probality table -----
+res.class <- apply(res,1,which.max) # which class -----
+res.proba <- apply(res,1,max) # probality -----
+resultTable <- cbind(y_ts,res,res.proba,res.class)
+i.name.num <- 1
+colnames(resultTable)[i.name.num] <- "sample"
+for (i.name in group.list) {
+  i.name.num <- i.name.num+1
+  colnames(resultTable)[i.name.num] <- paste("probaility of ",i.name)
+}
+i.name.num <- i.name.num+1
+colnames(resultTable)[c(i.name.num:(i.name.num+1))] <- c("Max_prob","group")
+resultTable$predictedGroup <- group.list[resultTable$group]
+resultTable <- resultTable[-c((ncol(resultTable)-1))]
+
+write_delim(x = resultTable,path = file.path(dir.Out,"0_prediction_result.txt"),delim = "\t")
+write_delim(x = testSet,path = file.path(dir.Out,"1_fitered_testset.txt"),delim = "\t")
+
+##########################################################################
+####################### visualizing prediction results ###################
+##########################################################################
+## reload one bcbcsf fit result from hardrive
+fit_bcbcsf <- reload_fit_bcbcsf (out_fit$fitfiles[1])
+## the fitting result for no_fsel = 50 can be retrieved directly from
+## out_fit:
+fit_bcbcsf_fsel50 <- out_fit$fit_bcbcsf
+## summarize the fitting result
+sum_fit <- bcbcsf_sumfit (fit_bcbcsf)
+
+## visualize fitting result
+png(file.path(dir.Out,"summary.png"),width = 700, height = 500,pointsize = 12, bg = "white")
+bcbcsf_plotsumfit (sum_fit)
+dev.off()
+
+
+if(Do_cross_validation){
+  ##########################################################################
+  ############################ cross validation ############################
+  ##########################################################################
+  ## doing cross validation with bcbcsf_fitpred on lymphoma data
+  cv_pred <- cross_vld (
+    ##################### classifier, data, and fold ###################
+    fitpred_func = bcbcsf_fitpred, X = X_tr, y = y_tr,
+    ################ all other arguments passed classifier ############
+    nos_fsel = c(ncol(X_tr)))
+  ## note: no_rmc = 100 is too small, omit it and use the default in practice
+
+  ## evaluate prediction given true labels
+  validation <- eval_pred (out_pred = cv_pred, y_ts = y_tr)
+  val_probs_at_truelabels <- validation$probs_at_truelabels %>% as.data.frame()
+  val_probs_at_truelabels <- cbind(groupSet,val_probs_at_truelabels)
+  val_probs_at_truelabels$group[val_probs_at_truelabels$group=="1"] <- group_selected
+  val_probs_at_truelabels$group[val_probs_at_truelabels$group=="2"] <- "others"
+  colnames(val_probs_at_truelabels)[3] <- "probability_at_truelabels"
+  val_summary <- validation$summary
+
+  write_delim(x = val_probs_at_truelabels,path = file.path(dir.Out,"crossVaildation.txt"),delim = "\t")
+  write_delim(x = val_summary,path = file.path(dir.Out,"crossVaildation_summary.txt"),delim = "\t")
+  # AMLP: minus average log probabilities at true labels, often called "deviation"
+
+
+  ## warning: this function is slow if nfold is large; if you have a
+  ## computer cluster, you better parallel the cross validation folds.
+  ##
+}
+
+
+```
+

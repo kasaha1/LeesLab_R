@@ -132,13 +132,8 @@ geneMedianCentering <- function(x){
   median_centered <- raw.data-median.table
   return(cbind(x[1],median_centered))
 }
-## Standardization-------------
-geneStandardization <- function(x){
-  raw.data <- x[-1] %>% as.matrix()
-  sd.table <- apply(raw.data,1,sd,na.rm = T)
-  res.table_1 <- raw.data/sd.table # divided by standard deviation
-  return(cbind(x[1],res.table_1))
-}
+
+## the value of NA to median
 transform_na_to_median <- function(x) {
   raw.data <- x[-1] %>% as.matrix()
   for (i in c(1:nrow(x))){
@@ -149,6 +144,23 @@ transform_na_to_median <- function(x) {
   res <- cbind(x[c(1)],raw.data)
   return (res)
 }
+
+#is.NAN
+is.nan.data.frame <- function(x){
+do.call(cbind, lapply(x, is.nan))}
+
+## Standardization-------------
+geneStandardization <- function(x){
+  raw.data <- x[-1] %>% as.matrix()
+  sd.table <- apply(raw.data,1,sd,na.rm = T)
+  res.table_1 <- raw.data/sd.table # divided by standard deviation
+  res <- cbind(x[1],res.table_1)
+  res[is.nan(res)] <- 0
+  return(res)
+}
+
+
+#-----------------------------------------===============-------------------
 
 
 # import data
@@ -182,22 +194,13 @@ if (Do_median_centering) {
   print("Two datasets are Median centered.........")
 }
 
-#is.NAN
-is.nan.data.frame <- function(x){
-do.call(cbind, lapply(x, is.nan))}
-
-## Standardization-------------
-geneStandardization <- function(x){
-  raw.data <- x[-1] %>% as.matrix()
-  sd.table <- apply(raw.data,1,sd,na.rm = T)
-  res.table_1 <- raw.data/sd.table # divided by standard deviation
-  res <- cbind(x[1],res.table_1)
-  res[is.nan(res)] <- 0
-  return(res)
+# standardization
+if (Do_divid_by_STD) {
+  training.raw.data <- training.raw.data %>% geneStandardization()
+  test.raw.data <- test.raw.data %>% geneStandardization()
+  print("Two datasets are Standardized.........")
 }
 
-
-#-----------------------------------------===============-------------------
 
 
 #-----------------------------------------
