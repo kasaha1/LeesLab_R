@@ -23,8 +23,8 @@ panel.cor <- function(x, y, digits=2, cex.cor)
   text(0.5, 0.25, paste("r=",txt))
   text(.5, .75, Signif)
 }
-panel.smooth<-function (x, y, col = "blue", bg = NA, pch = 18, 
-                        cex = 0.8, col.smooth = "red", span = 2/3, iter = 3, ...) 
+panel.smooth<-function (x, y, col = "deepskyblue1", bg = NA, pch = 18, 
+                        cex = 0.8, col.smooth = "firebrick", span = 2/3, iter = 3, ...) 
 {
   points(x, y, pch = pch, col = col, bg = bg, cex = cex)
   ok <- is.finite(x) & is.finite(y)
@@ -39,7 +39,7 @@ panel.hist <- function(x, ...)
   h <- hist(x, plot = FALSE)
   breaks <- h$breaks; nB <- length(breaks)
   y <- h$counts; y <- y/max(y)
-  rect(breaks[-nB], 0, breaks[-1], y, col="cyan", ...)
+  rect(breaks[-nB], 0, breaks[-1], y, col="darkorange1", ...)
 }
 
 
