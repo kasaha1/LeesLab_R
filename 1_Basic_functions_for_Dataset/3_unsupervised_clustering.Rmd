@@ -30,6 +30,8 @@ atLeastObservation_val <- 1
 ABS_value <- 2
 SD_val <- 2
 
+Do_PCA3D <- TRUE
+
 #===================================================================
 Start.col <- 2
 
@@ -48,7 +50,7 @@ instPak <- function(pkg){
 }
 
 #------------- Packages ----
-packages <- c("ggplot2", "dplyr", "reshape2","readr","colorspace","dendextend","amap","gplots","corrplot","Amelia")
+packages <- c("ggplot2", "dplyr", "reshape2","readr","colorspace","dendextend","amap","gplots","corrplot","pca3d","magick")
 instPak (packages) 
 #-----------------------------
 
@@ -70,19 +72,16 @@ packages_bioc <- c("ctc")
 instPak_bioc (packages_bioc)
 #-----------------------------
 
-
-
-
-
-## Data cleaning---------------
-data_cleaning <- function(x){
-  res <- list()
-  res$classes <- sapply(x,function(y) class(y))
-  res$na<- sapply(x,function(y) sum(is.na(y)))
-  res$unique <- sapply(x, function(y) length(unique(y)))
-  res$dulplicated <- sapply(x, function(y) sum(duplicated(y)))
-  res$map <- missmap(x, main = "Missing values vs observed")
-  return(res)
+# Transfomr_NA_to_Median
+transform_na_to_median <- function(x) {
+raw.data <- x[-1] %>% as.matrix()
+for (i in c(1:nrow(x))){
+temp.row <- raw.data[i,]
+median.temp <- median(temp.row,na.rm = T)
+raw.data[i,is.na(raw.data[i,])] <- median.temp
+}
+res <- cbind(x[c(1)],raw.data)
+return (res)
 }
 ## duplication removal by SD----------------------
 duplicateRemoverbySD <- function(x){
@@ -147,36 +146,8 @@ if (Start.col>2) {raw.data_1 <-raw.data[-c(1:(Start.col-2))]} else {raw.data_1 <
 # data processing
 ################################################################################
 print("Default processing filter gene by 2 SD, at least 1 observed of absolute 2....")
-cluster.raw_temp <- raw.data_1 %>% duplicateRemoverbySD %>% geneMedianCentering
+cluster.raw_temp <- raw.data_1 %>% transform_na_to_median %>% duplicateRemoverbySD %>% geneMedianCentering
 cluster.raw <-  cluster.raw_temp %>% geneFilterByABS(absVal = ABS_value, AtLeastObservation = atLeastObservation_val) %>% geneFilterBySD(sdValue = SD_val) # gene filtering
-
-# ----Fixing for interactive gene filtering
-# while (TRUE) {
-#   cluster.raw_temp_1 <- cluster.raw_temp
-#   print("adjust values........")
-#   gene_filter_question <- readline(prompt = "Do you want to adjust value of filtering ? (y or n)")
-#   if (gene_filter_question=="n"){
-#     break()
-#   } else {
-#     q_ABS <- readline(prompt = "Do you want to fileter by ABSOLUTE VALUE? (y or n)")
-#     if (q_ABS == "y") {
-#       q_ABS_ABS <- as.numeric(readline(prompt = "What's 'ABOLUTE value'?"))
-#       q_ABS_count <- as.integer(readline(prompt = "What's 'at LeastObservation value'?"))
-#       cluster.raw_temp_1 <- cluster.raw_temp_1 %>% geneFilterByABS(absVal = q_ABS_ABS, AtLeastObservation = q_ABS_count)
-#       cluster.raw <-cluster.raw_temp_1
-#     }
-#     q_SD <- readline(prompt = "Do you want to fileter by Standard deviation? (y or n)")
-#     if (q_SD == "y") {
-#       q_sd_val <- as.numeric(readline(prompt = "What's 'SD value'?"))
-#       cluster.raw_temp_1 <- cluster.raw_temp_1 %>% geneFilterBySD(sdValue = q_sd_val)
-#       cluster.raw <-cluster.raw_temp_1
-#     }
-#   }
-#   
-# }
-# 
-
-#################################################################################
 
 # clustering start
 
@@ -298,6 +269,37 @@ r2cdt(hc_dataClu_r,hc_dataClu,as.matrix(data.clustering_heatmap) ,file=file.path
 colnames(file.cutting.sample) <- c("sample","group")
 write_delim(x = file.cutting.sample,path = file.path(dirOut,"sample_treeView.txt"),delim = "\t")
 write_delim(x = file.cutting.gene,path = file.path(dirOut,"gene_treeView.txt"),delim = "\t")
+write_delim(cluster.raw,file.path(dirOut,"filteredDataset.txt"), delim = "\t")
+
+# PCA3D
+
+if (Do_PCA3D) {
+    # data import
+  data.raw <- cluster.raw
+  group.raw <- file.cutting.sample
+  colnames(group.raw) <- c("sample","group")
+  
+  # data processing
+ 
+  data.PCA <- data.raw %>% matrixTranspositionXY
+  data_temp <- inner_join(data.PCA,group.raw,by=c("sample"="sample"))
+  data.PCA <- data_temp[c(1:ncol(data.PCA))]
+  data.group <- data_temp[c(1,ncol(data_temp))]
+  data.group$group <- as.factor(data.group$group)
+  
+  
+  pca <- prcomp( data.PCA[,-1], scale.= TRUE )
+  pca3d( pca, group= data.group[,2],
+  fancy= F, bg= "white",
+  axes.color= "dimgray", new= T,show.group.labels=T
+  # ,palette = c("#00AFEF","#00A859","#C8C5E2","#F5874F","#A8518A","#ED3237")
+  ,legend = "topleft"
+  ,radius = 1
+  ,show.ellipses = T
+  )
+  # makeMoviePCA(dir=dirOut)
+  snapshotPCA3d(file.path(dirOut,"PCA3D.png"))
+}
 
 ```
 
