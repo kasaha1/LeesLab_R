@@ -38,7 +38,7 @@ averageDifference <- 2
 Start.col <- 2 # the starting column of numeric data in dataset
 
 dir     <- dirname(in.file_dataset)
-in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
+in.file.name=unlist(strsplit(basename(in.file_dataset),"\\.txt"))
 dirOut <- paste0(dir,"/output_superClustering_",in.file.name)
 
 ## To install Packages-------------
@@ -263,6 +263,7 @@ heatmap.2(as.matrix(data.clustering_heatmap),
 dev.off()
 write_delim(x = flitered_table,path = file.path(dirOut,"table_supervisedClustering.txt"),delim = "\t")
 write_delim(x = raw.groupdata,path = file.path(dirOut,"groupDataRevised.txt"),delim = "\t")
+write_delim(x= data.clustering_heatmap, path= file.path(dirOut,"groupDataRevised.cdt"),delim = "\t")
 
 print(paste0("The ",nrow(filinterd_list)," were filtered of ",nrow(res.table),"genes ......"))
 
