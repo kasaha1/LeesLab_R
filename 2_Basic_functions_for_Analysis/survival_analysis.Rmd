@@ -11,15 +11,25 @@ output: html_document
 #===================================================================
 # Properties: user input
 #-------------------------------------------------------------------
-in.file <- "survival_colon.txt" 
+print("Choose the dataSet.......")
+in.file_Dataset <- file.choose()
+
+
 theVariable.Name.followUp <- "followup" # "followup": follow up period(day or month or year)
 theVariable.Name.death <- "death" # "death": Whether to die. Death is indicated by "1", Censor is indicated by "0"
 theVariable.strata <- "perfor" #"strata": The dividing criteria. If there is no criteria, "None" should be indicated.
 
-dir.in     <- "C:/Users/SKang2/Documents/Git_R/LeesLab_R/2_Basic_functions_for_Analysis/example_dataset"
-dir.Out <- paste0(dir.in,"/output_survival")
+
 #===================================================================
 
+
+dir.in <- dirname(in.file_Dataset)
+in.file.name=unlist(strsplit(basename(in.file_Dataset),"\\.txt"))
+dir.Out <- paste0(dir.in,"/output_survival")
+
+if (!dir.exists(dir.Out)) {
+  dir.create(dir.Out)
+}
 
 ## To install Packages-------------
 instPak <- function(pkg){
@@ -35,7 +45,7 @@ instPak (packages)
 #-----------------------------
 
 # import data
-raw.data.survivals <- read_delim(file.path(dir.in,in.file),delim = "\t")
+raw.data.survivals <- read_delim(in.file_Dataset,delim = "\t")
 temp <- raw.data.survivals[,c(theVariable.Name.followUp,theVariable.Name.death)] %>% as.data.frame()
 colnames(temp)[1:2] <- c("temp_followup","temp_death")
 temp_raw.data.survivals <- cbind(raw.data.survivals,temp)
@@ -71,6 +81,11 @@ if(!file.exists(dir.Out)) {dir.create(dir.Out)}
 png(file.path(dir.Out,"survival_plot.png"),width = 700, height = 500,pointsize = 12, bg = "white")
   ggsurvplot(fit,conf.int = FALSE, pval = TRUE,legend.title = theVariable.strata)
 dev.off()
+
+pdf(file.path(dir.Out,"survival_plot.pdf"),width = 15, height = 10,pointsize = 12)
+  ggsurvplot(fit,conf.int = FALSE, pval = TRUE,legend.title = theVariable.strata)
+dev.off()
+
 
 ```
 
