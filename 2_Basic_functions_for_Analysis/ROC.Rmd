@@ -174,7 +174,7 @@ add_plot_ROC=function(x,lwd=2,col="black",
     if(ncol(x$lr$model)==2){
         ci=pROC::ci(ROC2roc(x))  
         temp=paste(temp,"(",round(ci[1],3),"-",round(ci[3],3),")",sep="")
-        result=wilcox.test(x$lr$model[,2],x$lr$model[,1])
+        result=wilcox.test(x$lr$model[,2]~x$lr$model[,1])
         if(result$p.value<0.001) {
           temp=paste(temp,", p < 0.001")
         } else temp=paste(temp,", p =",round(result$p.value,3))
