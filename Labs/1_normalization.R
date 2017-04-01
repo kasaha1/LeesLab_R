@@ -10,12 +10,8 @@ instPak <- function(pkg) {
 
 #------------- Packages ----
 packages <-
-  c("ggplot2",
-    "dplyr",
-    "reshape2",
-    "moonBook",
+  c("dplyr",
     "readr",
-    "colorspace",
     "shiny")
 instPak (packages)
 #-----------------------------
@@ -133,4 +129,6 @@ ui <- fluidPage(titlePanel("Uploading Files"),
                     plotOutput('plotContents2')
                   )
                 ))
-shinyApp(ui = ui, server = server)
+
+runApp(shinyApp(ui = ui, server = server),launch.browser = T)
+
