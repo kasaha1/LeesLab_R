@@ -79,8 +79,12 @@ server <- function(input, output) {
       paste("AfterNormalization", '.txt', sep='') 
     },
     content = function(file) {
+<<<<<<< HEAD
       contents.table <- cbind(datainFile()[1],do_it())
       write_delim(contents.table,file,delim = "\t")
+=======
+      write_delim(cbind(geneName,genomatrix),file,delim = "\t")
+>>>>>>> cbedd8890f18e60d63cc6524f5f896614a462b5b
     },
     contentType = "text/plain"
   )
