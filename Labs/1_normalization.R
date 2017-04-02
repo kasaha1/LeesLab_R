@@ -88,7 +88,7 @@ server <- function(input, output) {
   )
 }
 
-ui <- fluidPage(titlePanel("Uploading Files"),
+ui <- fluidPage(titlePanel("Quantile normalization by limma package"),
                 sidebarLayout(
                   sidebarPanel(
                     fileInput(
