@@ -83,16 +83,17 @@ raw.data[i,is.na(raw.data[i,])] <- median.temp
 res <- cbind(x[c(1)],raw.data)
 return (res)
 }
-## duplication removal by SD----------------------
+## Duplicated value removal by SD ---------------
 duplicateRemoverbySD <- function(x){
-  matrix_data <- as.matrix(x[-1])
+  matrix_data <- as.matrix(x[,-c(1)])
   sd <- apply(matrix_data,1,sd)
   order_num <- seq(1:nrow(x))
   transformed <- cbind(order_num,sd,x)
-  name_3 <- colnames(transformed)[3]
-  colnames(transformed)[3] <- "grouped"
+  name_list <- colnames(transformed)
+  colnames(transformed) <- paste0("var_",seq(1:ncol(transformed)))
+  colnames(transformed)[1:3] <- c("order_num","sd","grouped")
   res <- transformed %>% arrange(desc(sd)) %>% group_by(grouped) %>% filter(row_number()==1) %>% ungroup() %>% arrange(order_num)
-  colnames(res)[3] <- name_3
+  colnames(res) <- name_list
   return(res[c(-1,-2)])
 }
 ## Transpostion XY----------------
@@ -136,6 +137,22 @@ geneFilterByABS <- function(x, AtLeastObservation=1, absVal=2){
   print(paste(nrow(x[y_1,]),"passed out of",nrow(x),"-- FilterByABS"))
   return(x[y_1,])
 }
+
+# reorder dend-order
+reorder.dend <- function(x) {
+  i <- 1
+  res.table<- matrix(c(1),ncol = 1,nrow = 1)
+  for (j in c(2:(nrow(x)))) {
+    if (x[j,2]!=x[(j-1),2]) {i <- i+1}
+    temp <- matrix(c(i),nrow = 1,ncol = 1)
+    res.table <- rbind(res.table,temp)
+  }
+  res.table <- as.data.frame(res.table)
+  return(cbind(x,res.table))
+  # return(cbind(x,res.table))
+}
+
+
 #======================================================
 
 # import data
@@ -168,7 +185,9 @@ labels(dend) <- ID.data[order.dendrogram(dend)]
 clusterCut <- cutree(hc_dataClu,tree_cut)
 ordered_ID <- ID.data[order.dendrogram(dend)] %>% as.data.frame()
 cutting_1 <-  cbind(cluster.data[1],clusterCut)
-file.cutting.sample <- inner_join(ordered_ID,cutting_1,by=c("."="sample"))
+file.cutting.sample <- inner_join(ordered_ID,cutting_1,by=c("."="sample")) %>% reorder.dend()
+file.cutting.sample <- file.cutting.sample[-2]
+colnames(file.cutting.sample) <- c("sample","group")
 
 
 # dend <- hang.dendrogram(dend,hang_height=0.1)
@@ -202,7 +221,9 @@ clusterCut_r <- cutree(hc_dataClu_r,tree_cut_r)
 ordered_ID_r <- ID.data_r[order.dendrogram(dend_r)] %>% as.data.frame()
 cutting_1_r <-  cbind(cluster.data_r[1],clusterCut_r)
 temp_name <- colnames(cutting_1_r)[1]
-file.cutting.gene <- inner_join(ordered_ID_r,cutting_1_r,by=c("."=temp_name))
+file.cutting.gene <- inner_join(ordered_ID_r,cutting_1_r,by=c("."=temp_name)) %>% reorder.dend()
+file.cutting.gene <- file.cutting.gene[-2]
+colnames(file.cutting.gene) <-  c("gene","group")
 
 
 data.clustering_heatmap <- cluster.raw[-1]
@@ -218,7 +239,7 @@ colors_break = unique(c(seq(min(data_melted$value),v_1,length=100),seq(v_1,v_2,l
 my_palette <- colorRampPalette(c("green", "black", "red"))(n = 297)
 
 if(!file.exists(dirOut))dir.create(dirOut)
-cairo_pdf(file.path(dirOut,"heatmap.pdf"),width = 15, height = 10,pointsize = 12)
+pdf(file.path(dirOut,"heatmap.pdf"),width = 15, height = 10,pointsize = 12)
 
 heatmap.2(as.matrix(data.clustering_heatmap),
           # main = "Heatmap for the data set",

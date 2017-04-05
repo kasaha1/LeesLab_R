@@ -135,6 +135,10 @@ distanceOption <- "pearson"
 linkOption <- "average"
 tree_cut_r <- 3
 
+tmpdir <- tempdir()
+setwd(tempdir())
+print(tempdir())
+
 status <<- "Please, upload File. <br/> It will be median centered and its NA values will be replaced by median value"
 # # # # #
 
@@ -216,6 +220,17 @@ server <- function(input, output, session) {
     temp_name <- colnames(cutting_1_r)[1]
     file.cutting.gene <<- inner_join(ordered_ID_r,cutting_1_r,by=c("."=temp_name))
     
+    # cdt file creation
+    dirOut <- "cdts"
+    if(!file.exists(dirOut))dir.create(dirOut)
+    r2atr(reactiveHorizontalCluster.hc_dataClu(), file=file.path(dirOut,"cluster.atr"))
+    r2gtr(reactiveHorizontalCluster.hc_dataClu_r(), file=file.path(dirOut,"cluster.gtr"))
+    r2cdt(reactiveHorizontalCluster.hc_dataClu_r(),reactiveHorizontalCluster.hc_dataClu(),as.matrix(reactivefiltering()[-1]), file=file.path(dirOut,"cluster.cdt"))
+    files2zip <- dir('cdts', full.names = TRUE)
+    zip(zipfile = 'cdts', files = files2zip)
+    
+    
+    
     
     # heatmap
     
@@ -229,20 +244,6 @@ server <- function(input, output, session) {
     v_2 <- quantile(data_melted$value,probs = 0.90)
     colors_break = unique(c(seq(min(data_melted$value),v_1,length=100),seq(v_1,v_2,length=100),seq(v_2,max(data_melted$value),length=100)))
     my_palette <- colorRampPalette(c("green", "black", "red"))(n = 297)
-    
-    heatmap.2(as.matrix(data.clustering_heatmap),
-              # main = "Heatmap for the data set",
-              # srtCol = 20,
-              dendrogram = "both",
-              Rowv = dend_r,
-              Colv = dend, # this to make sure the columns are not ordered
-              density.info = "density",
-              breaks=colors_break,
-              col = my_palette,
-              trace="none",
-              cexRow = 0.3,
-              symm=F,symkey=F,symbreaks=T, scale="none"
-    )
     
     pdf(file="temp_plot.pdf",width = 15, height = 10,pointsize = 12)
       heatmap.2(as.matrix(data.clustering_heatmap),
@@ -259,6 +260,20 @@ server <- function(input, output, session) {
       symm=F,symkey=F,symbreaks=T, scale="none"
     )
     dev.off()
+    
+    heatmap.2(as.matrix(data.clustering_heatmap),
+              # main = "Heatmap for the data set",
+              # srtCol = 20,
+              dendrogram = "both",
+              Rowv = dend_r,
+              Colv = dend, # this to make sure the columns are not ordered
+              density.info = "density",
+              breaks=colors_break,
+              col = my_palette,
+              trace="none",
+              cexRow = 0.3,
+              symm=F,symkey=F,symbreaks=T, scale="none"
+    )
   })
   
   # Render
@@ -307,6 +322,20 @@ server <- function(input, output, session) {
       file.copy("temp_plot.pdf", file)
     }
   )
+  output$downloadcdt <- downloadHandler(
+    filename = function(){'cdtFiles.zip'},
+    content = function(fname) {
+      
+      fs <- c("cluster.atr", "cluster.gtr", "cluster.cdt")
+      r2atr(reactiveHorizontalCluster.hc_dataClu(), file="cluster.atr")
+      r2gtr(reactiveHorizontalCluster.hc_dataClu_r(), file = "cluster.gtr")
+      r2cdt(reactiveHorizontalCluster.hc_dataClu_r(),reactiveHorizontalCluster.hc_dataClu(),as.matrix(reactivefiltering()[-1]), file = "cluster.cdt")
+      print (fs)
+      zip(zipfile=fname, files=fs)
+      if(file.exists(paste0(fname, ".zip"))) {file.rename(paste0(fname, ".zip"), fname)}
+    },
+    contentType = "application/zip"
+  )
   
   
 }
@@ -343,6 +372,7 @@ ui <- fluidPage(titlePanel("UnSupervised Clustering"),
                     br(),
                     br(),
                     downloadButton('downloadDataHeatmap', 'Download Heatmap'),
+                    downloadButton('downloadcdt', 'Download cdt files'),
                     br(),
                     br()
                   ),
