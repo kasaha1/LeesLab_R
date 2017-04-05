@@ -1,19 +1,3 @@
----
-title: "unsupervised_clustering"
-author: "Sanghee Kang"
-date: "2017년 1월 22일"
-output: html_document
----
-
-# This code unsupervised cluster your gene data. 
-
-## Your dataset must be txt file(tab deliminated) and has the first column as symbol. The numeric gene matrix must start from 2nd columns
-
-[exmaple file](example_dataset/unsupervisedClustering_TCGA_sarcoma.txt)
-  
-![example dataset](Figures/supervisedClustering.jpg)
-
-```{r}
 
 #====================================functions
 ## To install Packages-------------
@@ -356,5 +340,3 @@ ui <- fluidPage(titlePanel("UnSupervised Clustering"),
                 ))
 
 runApp(shinyApp(ui = ui, server = server),launch.browser = T)
-```
-
