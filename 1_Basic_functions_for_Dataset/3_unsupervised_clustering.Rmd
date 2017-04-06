@@ -13,20 +13,44 @@ output: html_document
   
 ![example dataset](Figures/supervisedClustering.jpg)
 
-# Copy and paste the codes below. And Run~
 ```{r}
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+in.file <- file.choose()
+
+
+tree_cut <- 3
+distanceOption <- "pearson"
+linkOption <- "average"
+
+tree_cut_r <- 3
+# gene flitering
+atLeastObservation_val <- 1
+ABS_value <- 2
+SD_val <- 2
+
+Do_PCA3D <- TRUE
+
+#===================================================================
+Start.col <- 2
+
+dir     <- dirname(in.file)
+in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
+dirOut <- paste0(dir,"/output_UnsuperviedClustering_",in.file.name)
+
 
 #====================================functions
 ## To install Packages-------------
 instPak <- function(pkg){
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
   if (length(new.pkg)) 
-    install.packages(new.pkg, dependencies = TRUE)
+  install.packages(new.pkg, dependencies = TRUE)
   sapply(pkg, require, character.only = TRUE)
 }
 
 #------------- Packages ----
-packages <- c("dplyr", "reshape2","data.table","dendextend","amap","gplots","magick","readr","shiny")
+packages <- c("ggplot2", "dplyr", "reshape2","readr","colorspace","dendextend","amap","gplots","corrplot","pca3d","magick")
 instPak (packages) 
 #-----------------------------
 
@@ -50,14 +74,14 @@ instPak_bioc (packages_bioc)
 
 # Transfomr_NA_to_Median
 transform_na_to_median <- function(x) {
-  raw.data <- x[-1] %>% as.matrix()
-  for (i in c(1:nrow(x))){
-    temp.row <- raw.data[i,]
-    median.temp <- median(temp.row,na.rm = T)
-    raw.data[i,is.na(raw.data[i,])] <- median.temp
-  }
-  res <- cbind(x[c(1)],raw.data)
-  return (res)
+raw.data <- x[-1] %>% as.matrix()
+for (i in c(1:nrow(x))){
+temp.row <- raw.data[i,]
+median.temp <- median(temp.row,na.rm = T)
+raw.data[i,is.na(raw.data[i,])] <- median.temp
+}
+res <- cbind(x[c(1)],raw.data)
+return (res)
 }
 ## Duplicated value removal by SD ---------------
 duplicateRemoverbySD <- function(x){
@@ -72,7 +96,6 @@ duplicateRemoverbySD <- function(x){
   colnames(res) <- name_list
   return(res[c(-1,-2)])
 }
-
 ## Transpostion XY----------------
 matrixTranspositionXY <- function(x, firstColumnName="sample"){
   col_names_1 <- t(x[1])
@@ -93,7 +116,7 @@ geneMedianCentering <- function(x){
   raw.data <- x[-1] %>% as.matrix()
   median.table <- apply(raw.data ,c(1),median,na.rm = T) 
   median_centered <- raw.data-median.table
-  return(cbind(x[1],median_centered))
+return(cbind(x[1],median_centered))
 }
 
 # Gene filtering
@@ -114,6 +137,7 @@ geneFilterByABS <- function(x, AtLeastObservation=1, absVal=2){
   print(paste(nrow(x[y_1,]),"passed out of",nrow(x),"-- FilterByABS"))
   return(x[y_1,])
 }
+
 # reorder dend-order
 reorder.dend <- function(x) {
   i <- 1
@@ -128,272 +152,175 @@ reorder.dend <- function(x) {
   # return(cbind(x,res.table))
 }
 
-# variables define
-options(shiny.maxRequestSize = 3000 * 1024 ^ 2)
 
-distanceOption <- "pearson"
-linkOption <- "average"
-tree_cut_r <- 3
+#======================================================
 
-tmpdir <- tempdir()
-setwd(tempdir())
-print(tempdir())
+# import data
+raw.data <- read_delim(in.file,delim = "\t")
 
-status <<- "Please, upload File. <br/> It will be median centered and its NA values will be replaced by median value"
-# # # # #
+if (Start.col>2) {raw.data_1 <-raw.data[-c(1:(Start.col-2))]} else {raw.data_1 <-raw.data }
+
+# data processing
+################################################################################
+print("Default processing filter gene by 2 SD, at least 1 observed of absolute 2....")
+cluster.raw_temp <- raw.data_1 %>% transform_na_to_median %>% duplicateRemoverbySD %>% geneMedianCentering
+cluster.raw <-  cluster.raw_temp %>% geneFilterByABS(absVal = ABS_value, AtLeastObservation = atLeastObservation_val) %>% geneFilterBySD(sdValue = SD_val) # gene filtering
+
+# clustering start
+
+cluster.data <- matrixTranspositionXY(cluster.raw)
+
+ID.data <- t(cluster.data[1])
+raw.data.matrix <- as.matrix(cluster.data[-1])
 
 
-server <- function(input, output, session) {
-  # reactive functions 
-  datainFile <- reactive({
-    inFile <- input$file1
-    if (is.null(inFile))
-      return(NULL)
-    
-    f <- fread(inFile$datapath,sep = input$sep, na.strings="NA") %>% as.data.frame() %>% transform_na_to_median %>% duplicateRemoverbySD %>% geneMedianCentering
-    print("uploded")
-    status <<- "File upload complete. The next step, Data filter, is ready."
-    return(f)
-  })
+d_dataClu <- Dist(raw.data.matrix, method = distanceOption)
+hc_dataClu <- hclust(d_dataClu, method = linkOption)
+dend <- as.dendrogram(hc_dataClu)
+# dend <- rotate(dend, 1:5698)
+dend <- color_branches(dend, k= tree_cut)
+labels(dend) <- ID.data[order.dendrogram(dend)]
+
+# clutering group to TXT file
+clusterCut <- cutree(hc_dataClu,tree_cut)
+ordered_ID <- ID.data[order.dendrogram(dend)] %>% as.data.frame()
+cutting_1 <-  cbind(cluster.data[1],clusterCut)
+file.cutting.sample <- inner_join(ordered_ID,cutting_1,by=c("."="sample")) %>% reorder.dend()
+file.cutting.sample <- file.cutting.sample[-2]
+colnames(file.cutting.sample) <- c("sample","group")
+
+
+# dend <- hang.dendrogram(dend,hang_height=0.1)
+# dend <- set(dend, "labels_cex", 0.5)
+# plot(dend)
+
+#
+# par(mar = c(3,3,3,7))
+# plot(dend,
+#      main = "Clustered data set
+#      (the labels give the true groups)",
+#       nodePar = list(cex = .007))
+# legend("topleft", legend = levels(groupData$acronym), fill = rainbow_hcl(length(levels(groupData$acronym))))
+
+
+## vertical clustering
+cluster.data_r <- cluster.raw
+ID.data_r <- t(cluster.data_r[1])
+raw.data.matrix_r <- as.matrix(cluster.data_r[-1])
+
+
+d_dataClu_r <- Dist(raw.data.matrix_r, method = distanceOption)
+hc_dataClu_r <- hclust(d_dataClu_r, method = linkOption)
+dend_r <- as.dendrogram(hc_dataClu_r)
+# dend <- rotate(dend, 1:5698)
+# dend <- color_branches(dend, k=5)
+# plot(dend_r)
+
+# print gene
+clusterCut_r <- cutree(hc_dataClu_r,tree_cut_r)
+ordered_ID_r <- ID.data_r[order.dendrogram(dend_r)] %>% as.data.frame()
+cutting_1_r <-  cbind(cluster.data_r[1],clusterCut_r)
+temp_name <- colnames(cutting_1_r)[1]
+file.cutting.gene <- inner_join(ordered_ID_r,cutting_1_r,by=c("."=temp_name)) %>% reorder.dend()
+file.cutting.gene <- file.cutting.gene[-2]
+colnames(file.cutting.gene) <-  c("gene","group")
+
+
+data.clustering_heatmap <- cluster.raw[-1]
+
+row.names(data.clustering_heatmap) <- t(cluster.raw[1])
+# strip_colors <- rainbow_hcl(length(levels(groupData$acronym)))[as.numeric(groupData$acronym)]
+
+
+data_melted <- melt(data.clustering_heatmap,id.vars = 0)
+v_1 <- quantile(data_melted$value,probs = 0.10)
+v_2 <- quantile(data_melted$value,probs = 0.90)
+colors_break = unique(c(seq(min(data_melted$value),v_1,length=100),seq(v_1,v_2,length=100),seq(v_2,max(data_melted$value),length=100)))
+my_palette <- colorRampPalette(c("green", "black", "red"))(n = 297)
+
+if(!file.exists(dirOut))dir.create(dirOut)
+pdf(file.path(dirOut,"heatmap.pdf"),width = 15, height = 10,pointsize = 12)
+
+heatmap.2(as.matrix(data.clustering_heatmap),
+          # main = "Heatmap for the data set",
+          # srtCol = 20,
+          dendrogram = "both",
+          Rowv = rev(dend_r),
+          Colv = dend, # this to make sure the columns are not ordered
+          # margins =c(5,0.1),     
+          # key.xlab = "Cm",
+          # denscol = "grey",
+          density.info = "density",
+          breaks=colors_break,
+          #RowSideColors = strip_colors, # to add nice colored strips
+          # ColSideColors = strip_colors,
+          col = my_palette,
+          trace="none",
+          cexRow = 0.3,
+          symm=F,symkey=F,symbreaks=T, scale="none"
+)
+
+dev.off()
+
+bmp(file.path(dirOut,"heatmap.bmp"),width = 1000, height = 700,pointsize = 12, bg = "white")
+heatmap.2(as.matrix(data.clustering_heatmap),
+          # main = "Heatmap for the data set",
+          # srtCol = 20,
+          dendrogram = "both",
+          Rowv = rev(dend_r),
+          Colv = dend, # this to make sure the columns are not ordered
+          # margins =c(5,0.1),     
+          # key.xlab = "Cm",
+          # denscol = "grey",
+          density.info = "density",
+          breaks=colors_break,
+          #RowSideColors = strip_colors, # to add nice colored strips
+          # ColSideColors = strip_colors,
+          col = my_palette,
+          trace="none",
+          cexRow = 0.3,
+          symm=F,symkey=F,symbreaks=T, scale="none"
+)
+dev.off()
+
+r2atr(hc_dataClu, file=file.path(dirOut,"cluster.atr"))
+r2gtr(hc_dataClu_r, file=file.path(dirOut,"cluster.gtr"))
+r2cdt(hc_dataClu_r,hc_dataClu,as.matrix(data.clustering_heatmap) ,file=file.path(dirOut,"cluster.cdt"))
+
+colnames(file.cutting.sample) <- c("sample","group")
+write_delim(x = file.cutting.sample,path = file.path(dirOut,"sample_treeView.txt"),delim = "\t")
+write_delim(x = file.cutting.gene,path = file.path(dirOut,"gene_treeView.txt"),delim = "\t")
+write_delim(cluster.raw,file.path(dirOut,"filteredDataset.txt"), delim = "\t")
+
+# PCA3D
+
+if (Do_PCA3D) {
+    # data import
+  data.raw <- cluster.raw
+  group.raw <- file.cutting.sample
+  colnames(group.raw) <- c("sample","group")
   
-  reactivefiltering <- reactive({
-    data.raw <- datainFile()
-    if (is.null(data.raw))
-      return(NULL)
-    res.filter <- data.raw %>% geneFilterByABS(absVal = input$ABS_value, AtLeastObservation = input$atLeastObservation_val) %>% geneFilterBySD(sdValue = input$SD_val)
-    status1 <<- paste("Filtering done. ",nrow(res.filter),"passed out of",nrow(data.raw),"-- FilterByABS")
-    status <<- NULL
-    return(res.filter)
-  })
-  
-  reactiveHorizontalCluster.hc_dataClu <- reactive({
-    d_dataClu <- Dist(as.matrix(reactiveMatrixTranposition()[-1]), method = distanceOption)
-    hc_dataClu <- hclust(d_dataClu, method = linkOption)
-  })
-  reactiveHorizontalCluster.hc_dataClu_r <- reactive({
-    d_dataClu_r <- Dist(as.matrix(reactivefiltering()[-1]), method = distanceOption)
-    hc_dataClu_r <- hclust(d_dataClu_r, method = linkOption)
-  })
-  reactiveMatrixTranposition <- reactive({
-    matrixTranspositionXY(reactivefiltering())
-  })
+  # data processing
+ 
+  data.PCA <- data.raw %>% matrixTranspositionXY
+  data_temp <- inner_join(data.PCA,group.raw,by=c("sample"="sample"))
+  data.PCA <- data_temp[c(1:ncol(data.PCA))]
+  data.group <- data_temp[c(1,ncol(data_temp))]
+  data.group$group <- as.factor(data.group$group)
   
   
-  # event reactive
-  doDataFiltering <- eventReactive(input$doFilter,{
-    res.filter <- reactivefiltering()
-    
-    return(res.filter)
-  })
-  
-  doClustering <- eventReactive(input$doClustering,{
-   
-    # clustering start
-    
-    cluster.data <- reactiveMatrixTranposition()
-    ID.data <- t(cluster.data[1])
-    raw.data.matrix <<- as.matrix(cluster.data[-1])
-    
-    hc_dataClu <- reactiveHorizontalCluster.hc_dataClu()
-    dend <- as.dendrogram(hc_dataClu)
-    dend <- color_branches(dend, k= input$tree_cut)
-    labels(dend) <- ID.data[order.dendrogram(dend)]
-    
-    # clutering group to TXT file
-    clusterCut <- cutree(hc_dataClu,input$tree_cut)
-    ordered_ID <- ID.data[order.dendrogram(dend)] %>% as.data.frame()
-    cutting_1 <-  cbind(cluster.data[1],clusterCut)
-    file.cutting.sample <<- inner_join(ordered_ID,cutting_1,by=c("."="sample"))
-    file.cutting.sample <<- reorder.dend(file.cutting.sample)[-2]
-    colnames(file.cutting.sample) <<- c("sample","group")
-
-    ## vertical clustering
-    cluster.data_r <- reactivefiltering()
-    ID.data_r <- t(cluster.data_r[1])
-    raw.data.matrix_r <<- as.matrix(cluster.data_r[-1])
-    
-    hc_dataClu_r <- reactiveHorizontalCluster.hc_dataClu_r()
-   
-    dend_r <- as.dendrogram(hc_dataClu_r)
-
-    # print gene
-    clusterCut_r <- cutree(hc_dataClu_r,tree_cut_r)
-    ordered_ID_r <- ID.data_r[order.dendrogram(dend_r)] %>% as.data.frame()
-    cutting_1_r <-  cbind(cluster.data_r[1],clusterCut_r)
-    temp_name <- colnames(cutting_1_r)[1]
-    file.cutting.gene <<- inner_join(ordered_ID_r,cutting_1_r,by=c("."=temp_name))
-    file.cutting.gene <<-reorder.dend(file.cutting.gene)[-2]
-    colnames(file.cutting.gene) <<- c("gene","group")
-    
-    # cdt file creation
-    dirOut <- "cdts"
-    if(!file.exists(dirOut))dir.create(dirOut)
-    r2atr(reactiveHorizontalCluster.hc_dataClu(), file=file.path(dirOut,"cluster.atr"))
-    r2gtr(reactiveHorizontalCluster.hc_dataClu_r(), file=file.path(dirOut,"cluster.gtr"))
-    r2cdt(reactiveHorizontalCluster.hc_dataClu_r(),reactiveHorizontalCluster.hc_dataClu(),as.matrix(reactivefiltering()[-1]), file=file.path(dirOut,"cluster.cdt"))
-    tarfile <- 'newfile.tgz'
-    tar(tarfile,dirOut,compression='gzip')
-    
-    
-    
-    
-    # heatmap
-    
-    data.clustering_heatmap <- reactivefiltering()[-1]
-    row.names(data.clustering_heatmap) <- t(reactivefiltering()[1])
-    # strip_colors <- rainbow_hcl(length(levels(groupData$acronym)))[as.numeric(groupData$acronym)]
-    
-    
-    data_melted <- melt(data.clustering_heatmap,id.vars = 0)
-    v_1 <- quantile(data_melted$value,probs = 0.10)
-    v_2 <- quantile(data_melted$value,probs = 0.90)
-    colors_break = unique(c(seq(min(data_melted$value),v_1,length=100),seq(v_1,v_2,length=100),seq(v_2,max(data_melted$value),length=100)))
-    my_palette <- colorRampPalette(c("green", "black", "red"))(n = 297)
-    
-    pdf(file="temp_plot.pdf",width = 15, height = 10,pointsize = 12)
-      heatmap.2(as.matrix(data.clustering_heatmap),
-      # main = "Heatmap for the data set",
-      # srtCol = 20,
-      dendrogram = "both",
-      Rowv = rev(dend_r),
-      Colv = dend, # this to make sure the columns are not ordered
-      density.info = "density",
-      breaks=colors_break,
-      col = my_palette,
-      trace="none",
-      cexRow = 0.7,
-      symm=F,symkey=F,symbreaks=T, scale="none"
-    )
-    dev.off()
-    
-    heatmap.2(as.matrix(data.clustering_heatmap),
-              # main = "Heatmap for the data set",
-              # srtCol = 20,
-              dendrogram = "both",
-              Rowv = rev(dend_r),
-              Colv = dend, # this to make sure the columns are not ordered
-              density.info = "density",
-              breaks=colors_break,
-              col = my_palette,
-              trace="none",
-              cexRow = 0.7,
-              symm=F,symkey=F,symbreaks=T, scale="none"
-    )
-  })
-  
-  # Render
-  output$resultUpload <- renderUI({
-    # HTML(doUploadFile())
-    datainFile()
-    HTML(status)
-  })
-  output$resultfilter <- renderUI({
-    doDataFiltering()
-    HTML(status1)
-  })
-  output$cluterPlot <- renderPlot({
-    doClustering()
-  })
-
-  
-  # downLoad
-  output$downloadDataFiltered <- downloadHandler(
-    filename = function() {
-      "FilteredData.txt"
-    },
-    content = function(file) {
-      
-      contents.table <- reactivefiltering()
-      write_delim(contents.table, file, delim = "\t",na = "")
-    },
-    contentType = "text/plain"
+  pca <- prcomp( data.PCA[,-1], scale.= TRUE )
+  pca3d( pca, group= data.group[,2],
+  fancy= F, bg= "white",
+  axes.color= "dimgray", new= T,show.group.labels=T
+  # ,palette = c("#00AFEF","#00A859","#C8C5E2","#F5874F","#A8518A","#ED3237")
+  ,legend = "topleft"
+  ,radius = 1
+  ,show.ellipses = T
   )
-  output$downloadclusterGroup <- downloadHandler(
-    filename = function() {
-      "ClusteredSample.txt"
-    },
-    content = function(file) {
-      
-      contents.table <- file.cutting.sample
-      write_delim(contents.table, file, delim = "\t",na = "")
-    },
-    contentType = "text/plain"
-  )
-  output$downloadclustergene <- downloadHandler(
-    filename = function() {
-      "ClusteredGene.txt"
-    },
-    content = function(file) {
-      
-      contents.table <- file.cutting.gene
-      write_delim(contents.table, file, delim = "\t",na = "")
-    },
-    contentType = "text/plain"
-  )
-  output$downloadDataHeatmap <- downloadHandler(
-    filename = function() {
-      "heatmap.pdf"
-    },
-    content <- function(file) {
-      file.copy("temp_plot.pdf", file)
-    }
-  )
-  output$downloadcdt <- downloadHandler(
-    filename = function(){'cdtFiles.tgz'},
-    content = function(file) {
-      file.copy("newfile.tgz", file)
-    }
-  )
-  
-  
+  # makeMoviePCA(dir=dirOut)
+  snapshotPCA3d(file.path(dirOut,"PCA3D.png"))
 }
 
-ui <- fluidPage(titlePanel("UnSupervised Clustering"),
-                sidebarLayout(
-                  sidebarPanel(
-                    fileInput(
-                      'file1',
-                      h4('Choose txt File'),
-                      accept = c('text/csv',
-                                 'text/comma-separated-values,text/plain',
-                                 '.csv')
-                    ),
-                    radioButtons('sep', 'Separator',
-                                 c(
-                                   Comma = ',',
-                                   Semicolon = ';',
-                                   Tab = '\t'
-                                 ),
-                                 '\t'),
-                    br(),
-                    h4("Filter Data"),
-                    numericInput("SD_val", label = "SD (gene vector)//", value = 0),
-                    numericInput("atLeastObservation_val", label = "At least", value = 1),
-                    numericInput("ABS_value", label = "observations with abs(Val)>=", value = 0),
-                    actionButton("doFilter", "Filter Data",class = "btn-primary"),
-                    downloadButton('downloadDataFiltered', 'Download Filtered Data'),
-                    br(),
-                    br(),
-                    numericInput("tree_cut", label = "Number of clustering group", value = 3),
-                    actionButton("doClustering", "Do Cluster", class = "btn-primary"),
-                    downloadButton('downloadclusterGroup', 'Sample'),
-                    downloadButton('downloadclustergene', 'Gene'),
-                    br(),
-                    br(),
-                    downloadButton('downloadDataHeatmap', 'Download Heatmap'),
-                    downloadButton('downloadcdt', 'Download cdt files'),
-                    br(),
-                    br()
-                  ),
-                  mainPanel(
-                    # tableOutput("table_display"),
-                    htmlOutput("resultUpload"),
-                    htmlOutput("resultfilter"),
-                    br(),br(),
-                    plotOutput("cluterPlot")
-                  )
-                ))
-
-runApp(shinyApp(ui = ui, server = server),launch.browser = T)
 ```
 

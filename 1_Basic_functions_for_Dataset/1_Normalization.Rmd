@@ -1,133 +1,104 @@
 ---
 title: "normalization"
-author: "Sanghee Kang"
-date: "2017-4-1"
+author: "Kang sanghee"
+date: "January 26, 2017"
 output: html_document
 ---
-This is the code for quantile normalization. 
-
-# Copy and paste the codes below. And Run~
-
 ```{r}
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+in.file <- file.choose()
+Start.col <- 2  # The Numeric-array-data starts at this column
+dir     <- dirname(in.file)
+doNoramlization <- TRUE
+doLog  <- TRUE # transform to log2 values TRUE or FALSE
+flooring_afterLog <- TRUE # TRUE or FALSE
+dirOut <- paste0(dir,"/output_norm")
+#===================================================================
+
+
 ## To install Packages-------------
-instPak <- function(pkg) {
+instPak <- function(pkg){
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
-  if (length(new.pkg))
+  if (length(new.pkg)) 
     install.packages(new.pkg, dependencies = TRUE)
   sapply(pkg, require, character.only = TRUE)
 }
 
-#------------- Packages ----
-packages <-
-  c("dplyr",
-    "readr",
-    "shiny",
-    "data.table")
-instPak (packages)
-#-----------------------------
-if (!("limma" %in% installed.packages()[, "Package"])) {
+if (!("limma" %in% installed.packages()[,"Package"])) {
   source("https://bioconductor.org/biocLite.R")
   biocLite("limma")
 }
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr","readr","colorspace")
+instPak (packages) 
 library(limma)
-options(shiny.maxRequestSize = 3000 * 1024 ^ 2)
+#-----------------------------
 
-# # # # #
+in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
+btwn_option = "quantile" # Options: "none"', '"scale"', '"quantile"','"Aquantile"', '"Gquantile"', '"Rquantile"', '"Tquantile"' or '"vsn"'
+out.fig.1 = paste(in.file.name, "_", "boxplot_preprocessing", ".jpg", sep="")
+out.fig.2 = paste(in.file.name, "_", "boxplot_",btwn_option, ".jpg", sep="")
+out.file =  paste(in.file.name,"_","profile_normlized.txt",sep="")
+out.p.log = paste(in.file.name,"_","profile_normlized_log2.txt",sep="")
 
-server <- function(input, output) {
-  datainFile <- reactive({
-    inFile <- input$file1
-    
-    if (is.null(inFile))
-      return(NULL)
-    
-     fread(inFile$datapath,sep = input$sep, na.strings="NA") %>% as.data.frame()
-  })
-  
-  do_it <-  eventReactive(input$action1, {
-    data.plot <- datainFile()
-    M.nor <- data.plot[-1] %>% as.matrix()
-    
-    if (input$Flooring_after_Log2) {
-      flooringFunction <- function(x) {
-        if (x < 1) {
-          x <- 1
-        }
-        return(x)
-      }
-      M.nor <- apply(M.nor, c(1, 2), flooringFunction)
-    }
-    if (input$doLog2)
-    {
-      M.nor <- log2(M.nor)
-    }
-    if (input$doNoramlization) {
-      M.nor <- normalizeBetweenArrays(M.nor, method = "quantile")
-    } else{
-      M.nor <- M.nor
-    }
-    return(round(M.nor, 4))
-  })
-  
-  
-  output$plotContents1 <- renderPlot({
-    if (!is.null(datainFile())) {
-      data.plot <- datainFile()
-      boxplot(data.plot[-1], main = "Before Do")
-      geneName <<- data.plot[1]
-    }
-  })
-  output$plotContents2 <- renderPlot({
-    data.plot.do <- do_it()
-    boxplot(data.plot.do, main = "After Do")
-    genomatrix <<- data.plot.do
-  })
-  
-  output$downloadData <- downloadHandler(
-    filename = function() {
-      paste("AfterNormalization", '.txt', sep = '')
-    },
-    content = function(file) {
 
-      contents.table <- cbind(datainFile()[1], do_it())
-      write_delim(contents.table, file, delim = "\t",na = "")
-    },
-    contentType = "text/plain"
-  )
+# Input file Reading
+in.data = read_delim(in.file,delim ="\t",quote = "")
+in.data.edit <-data.frame(in.data[,(Start.col):ncol(in.data)])
+
+
+# Creat output data
+
+if(!file.exists(dirOut)){  dir.create(dirOut)}
+
+
+# Normalization
+if (doNoramlization) {
+  M.nor <- normalizeBetweenArrays(as.matrix(in.data.edit),method=btwn_option)
+} else{
+  M.nor <- as.matrix(in.data.edit)
 }
 
-ui <- fluidPage(titlePanel("Quantile normalization by limma package"),
-                sidebarLayout(
-                  sidebarPanel(
-                    fileInput(
-                      'file1',
-                      'Choose txt File',
-                      accept = c('text/csv',
-                                 'text/comma-separated-values,text/plain',
-                                 '.csv')
-                    ),
-                    tags$hr(),
-                    radioButtons('sep', 'Separator',
-                                 c(
-                                   Comma = ',',
-                                   Semicolon = ';',
-                                   Tab = '\t'
-                                 ),
-                                 '\t'),
-                    h4("After file upload......."),
-                    checkboxInput("doNoramlization", label = "Noramlization", value = TRUE),
-                    checkboxInput("Flooring_after_Log2", label = "Flooring under 1", value = F),
-                    checkboxInput("doLog2", label = "Log2", value = F),
-                    actionButton("action1", "Do", class = "btn-primary"),
-                    downloadButton('downloadData', 'Download')
-                  ),
-                  mainPanel(
-                    plotOutput('plotContents1'),
-                    br(),
-                    plotOutput('plotContents2')
-                  )
-                ))
+# flooring
+if (flooring_afterLog) {
+    flooringFunction <- function(x){
+      if (x<1) {
+        x <- 1
+      }
+      return(x)
+    }
+    M.nor <- apply(M.nor,c(1,2),flooringFunction)
+  }
 
-runApp(shinyApp(ui = ui, server = server),launch.browser = T)
+# Option for Log 2 (option: "T", "F")
+if(doLog)
+{
+  
+  M.nor_log <- log2(M.nor)
+  data.out.log <-cbind(in.data[,1:(Start.col-1)], round(M.nor_log,4))
+  write_delim(x = data.out.log, path =file.path(dirOut,out.p.log), delim = "\t",na = "")
+
+}
+
+
+# Writing the output table
+data.out <-cbind(in.data[,1:(Start.col-1)], round(M.nor,4))
+write_delim(x = data.out, path =file.path(dirOut,out.file), delim = "\t",na = "")
+
+
+# Boxplot for raw data
+jpeg(filename = file.path(dirOut,out.fig.1), width = 4000, height = 480, pointsize = 14, quality = 30, bg = "white", res = NA)
+boxplot(in.data.edit, main=paste("Boxplot of ", in.file.name," Before Between normalization"))
+dev.off()
+
+
+# Boxplot for the data after Between-slide normalization
+jpeg(filename = file.path(dirOut,out.fig.2), width = 4000, height = 480, pointsize = 14, quality = 20, bg = "white", res = NA)
+boxplot(data.frame(M.nor), main=paste("Boxplot of ", in.file, " after Between normalization", "_", btwn_option, sep=""))
+dev.off()
 
 ```
+
