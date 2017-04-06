@@ -9,6 +9,8 @@ output: html_document
 
 ! [Directions in example dataset](Figures/duplication_removal_bySD.png)
 
+Copy and paste the codes below. And Run~
+
 ```{r}
 
 ## To install Packages-------------
