@@ -13,7 +13,7 @@ output: html_document
   
 ![example dataset](Figures/supervisedClustering.jpg)
 
-# Copy the codes and paste and Run~
+# Copy and paste the codes below. And Run~
 ```{r}
 
 #====================================functions
