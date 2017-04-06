@@ -4,6 +4,9 @@ author: "Sanghee Kang"
 date: "2017-4-1"
 output: html_document
 ---
+This is the code for quantile normalization. 
+
+# Copy and paste the codes below. And Run~
 
 ```{r}
 ## To install Packages-------------
