@@ -25,7 +25,7 @@ instPak <- function(pkg){
 }
 
 #------------- Packages ----
-packages <- c("ggplot2", "dplyr", "reshape2","data.table","colorspace","dendextend","amap","gplots","corrplot","pca3d","magick","readr")
+packages <- c("dplyr", "reshape2","data.table","dendextend","amap","gplots","magick","readr","shiny")
 instPak (packages) 
 #-----------------------------
 
@@ -128,7 +128,6 @@ reorder.dend <- function(x) {
 }
 
 # variables define
-library(shiny)
 options(shiny.maxRequestSize = 3000 * 1024 ^ 2)
 
 distanceOption <- "pearson"
@@ -167,12 +166,15 @@ server <- function(input, output, session) {
   })
   
   reactiveHorizontalCluster.hc_dataClu <- reactive({
-    d_dataClu <- Dist(raw.data.matrix, method = distanceOption)
+    d_dataClu <- Dist(as.matrix(reactiveMatrixTranposition()[-1]), method = distanceOption)
     hc_dataClu <- hclust(d_dataClu, method = linkOption)
   })
   reactiveHorizontalCluster.hc_dataClu_r <- reactive({
-    d_dataClu_r <- Dist(raw.data.matrix_r, method = distanceOption)
+    d_dataClu_r <- Dist(as.matrix(reactivefiltering()[-1]), method = distanceOption)
     hc_dataClu_r <- hclust(d_dataClu_r, method = linkOption)
+  })
+  reactiveMatrixTranposition <- reactive({
+    matrixTranspositionXY(reactivefiltering())
   })
   
   
@@ -187,7 +189,7 @@ server <- function(input, output, session) {
    
     # clustering start
     
-    cluster.data <- matrixTranspositionXY(reactivefiltering())
+    cluster.data <- reactiveMatrixTranposition()
     ID.data <- t(cluster.data[1])
     raw.data.matrix <<- as.matrix(cluster.data[-1])
     
@@ -219,6 +221,8 @@ server <- function(input, output, session) {
     cutting_1_r <-  cbind(cluster.data_r[1],clusterCut_r)
     temp_name <- colnames(cutting_1_r)[1]
     file.cutting.gene <<- inner_join(ordered_ID_r,cutting_1_r,by=c("."=temp_name))
+    file.cutting.gene <<-reorder.dend(file.cutting.gene)[-2]
+    colnames(file.cutting.gene) <<- c("gene","group")
     
     # cdt file creation
     dirOut <- "cdts"
@@ -226,8 +230,8 @@ server <- function(input, output, session) {
     r2atr(reactiveHorizontalCluster.hc_dataClu(), file=file.path(dirOut,"cluster.atr"))
     r2gtr(reactiveHorizontalCluster.hc_dataClu_r(), file=file.path(dirOut,"cluster.gtr"))
     r2cdt(reactiveHorizontalCluster.hc_dataClu_r(),reactiveHorizontalCluster.hc_dataClu(),as.matrix(reactivefiltering()[-1]), file=file.path(dirOut,"cluster.cdt"))
-    files2zip <- dir('cdts', full.names = TRUE)
-    zip(zipfile = 'cdts', files = files2zip)
+    tarfile <- 'newfile.tgz'
+    tar(tarfile,dirOut,compression='gzip')
     
     
     
@@ -250,13 +254,13 @@ server <- function(input, output, session) {
       # main = "Heatmap for the data set",
       # srtCol = 20,
       dendrogram = "both",
-      Rowv = dend_r,
+      Rowv = rev(dend_r),
       Colv = dend, # this to make sure the columns are not ordered
       density.info = "density",
       breaks=colors_break,
       col = my_palette,
       trace="none",
-      cexRow = 0.3,
+      cexRow = 0.7,
       symm=F,symkey=F,symbreaks=T, scale="none"
     )
     dev.off()
@@ -265,13 +269,13 @@ server <- function(input, output, session) {
               # main = "Heatmap for the data set",
               # srtCol = 20,
               dendrogram = "both",
-              Rowv = dend_r,
+              Rowv = rev(dend_r),
               Colv = dend, # this to make sure the columns are not ordered
               density.info = "density",
               breaks=colors_break,
               col = my_palette,
               trace="none",
-              cexRow = 0.3,
+              cexRow = 0.7,
               symm=F,symkey=F,symbreaks=T, scale="none"
     )
   })
@@ -314,6 +318,17 @@ server <- function(input, output, session) {
     },
     contentType = "text/plain"
   )
+  output$downloadclustergene <- downloadHandler(
+    filename = function() {
+      "ClusteredGene.txt"
+    },
+    content = function(file) {
+      
+      contents.table <- file.cutting.gene
+      write_delim(contents.table, file, delim = "\t",na = "")
+    },
+    contentType = "text/plain"
+  )
   output$downloadDataHeatmap <- downloadHandler(
     filename = function() {
       "heatmap.pdf"
@@ -323,18 +338,10 @@ server <- function(input, output, session) {
     }
   )
   output$downloadcdt <- downloadHandler(
-    filename = function(){'cdtFiles.zip'},
-    content = function(fname) {
-      
-      fs <- c("cluster.atr", "cluster.gtr", "cluster.cdt")
-      r2atr(reactiveHorizontalCluster.hc_dataClu(), file="cluster.atr")
-      r2gtr(reactiveHorizontalCluster.hc_dataClu_r(), file = "cluster.gtr")
-      r2cdt(reactiveHorizontalCluster.hc_dataClu_r(),reactiveHorizontalCluster.hc_dataClu(),as.matrix(reactivefiltering()[-1]), file = "cluster.cdt")
-      print (fs)
-      zip(zipfile=fname, files=fs)
-      if(file.exists(paste0(fname, ".zip"))) {file.rename(paste0(fname, ".zip"), fname)}
-    },
-    contentType = "application/zip"
+    filename = function(){'cdtFiles.tgz'},
+    content = function(file) {
+      file.copy("newfile.tgz", file)
+    }
   )
   
   
@@ -368,7 +375,8 @@ ui <- fluidPage(titlePanel("UnSupervised Clustering"),
                     br(),
                     numericInput("tree_cut", label = "Number of clustering group", value = 3),
                     actionButton("doClustering", "Do Cluster", class = "btn-primary"),
-                    downloadButton('downloadclusterGroup', 'Download Clustered'),
+                    downloadButton('downloadclusterGroup', 'Sample'),
+                    downloadButton('downloadclustergene', 'Gene'),
                     br(),
                     br(),
                     downloadButton('downloadDataHeatmap', 'Download Heatmap'),
