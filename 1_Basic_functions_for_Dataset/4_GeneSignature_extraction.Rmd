@@ -150,7 +150,7 @@ if (Start.col>2) {raw.data_1 <-raw.data[-c(1:(Start.col-2))]} else {raw.data_1 <
 print("If group does not consisted of 2 groups.....,the others get together as one group as except for 'group selected'")
 raw.groupdata <- raw.groupdata_in
 raw.groupdata$group <- as.character(raw.groupdata$group)
-raw.groupdata$group[raw.groupdata$group!=group_selected] <- "theOthers"
+raw.groupdata$group[raw.groupdata$group!=group_selected] <- "zTheOthers"
 raw.groupdata$group <- as.character(raw.groupdata$group)
 raw.groupdata$group <- as.factor(raw.groupdata$group)
 
@@ -218,7 +218,7 @@ colors_break = unique(c(seq(min(data_melted$value),v_1,length=100),seq(v_1,v_2,l
 my_palette <- colorRampPalette(c("green", "black", "red"))(n = 297)
 
 if(!file.exists(dirOut))dir.create(dirOut)
-cairo_pdf(file.path(dirOut,"supervisedHeatmap.pdf"),width = 15, height = 10,pointsize = 12)
+pdf(file.path(dirOut,"supervisedHeatmap.pdf"),width = 15, height = 10,pointsize = 12)
 
 heatmap.2(as.matrix(data.clustering_heatmap),
           # main = "Heatmap for the data set",
@@ -263,7 +263,9 @@ heatmap.2(as.matrix(data.clustering_heatmap),
 dev.off()
 write_delim(x = flitered_table,path = file.path(dirOut,"table_supervisedClustering.txt"),delim = "\t")
 write_delim(x = raw.groupdata,path = file.path(dirOut,"groupDataRevised.txt"),delim = "\t")
-write_delim(x= data.clustering_heatmap, path= file.path(dirOut,"groupDataRevised.cdt"),delim = "\t")
+temp_cdt <- cbind(c(1:nrow(flitered_table_medianCentering)),flitered_table_medianCentering)
+colnames(temp_cdt)[1:2] <- c("UNIQID","NAME")
+write_delim(x= temp_cdt, path= file.path(dirOut,"groupDataRevised.cdt"),delim = "\t")
 
 print(paste0("The ",nrow(filinterd_list)," were filtered of ",nrow(res.table),"genes ......"))
 
