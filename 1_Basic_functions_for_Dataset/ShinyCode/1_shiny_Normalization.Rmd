@@ -32,6 +32,12 @@ if (!("limma" %in% installed.packages()[, "Package"])) {
 library(limma)
 options(shiny.maxRequestSize = 3000 * 1024 ^ 2)
 
+flooringFunction <- function(x) {
+  if(is.na(x)){return(x)}
+  if (x < 1) {x <- 1}
+  return(x)
+}
+
 # # # # #
 
 server <- function(input, output) {
@@ -49,24 +55,19 @@ server <- function(input, output) {
     M.nor <- data.plot[-1] %>% as.matrix()
     
     if (input$Flooring_after_Log2) {
-      flooringFunction <- function(x) {
-        if (x < 1) {
-          x <- 1
-        }
-        return(x)
-      }
       M.nor <- apply(M.nor, c(1, 2), flooringFunction)
+      print("flooring done")
     }
     if (input$doLog2)
     {
       M.nor <- log2(M.nor)
+      print("log2 done")
     }
     if (input$doNoramlization) {
       M.nor <- normalizeBetweenArrays(M.nor, method = "quantile")
-    } else{
-      M.nor <- M.nor
-    }
-    return(round(M.nor, 4))
+      print("Normalization done")
+    } 
+    return(cbind(data.plot[1],round(M.nor, 4)))
   })
   
   
@@ -74,13 +75,11 @@ server <- function(input, output) {
     if (!is.null(datainFile())) {
       data.plot <- datainFile()
       boxplot(data.plot[-1], main = "Before Do")
-      geneName <<- data.plot[1]
     }
   })
   output$plotContents2 <- renderPlot({
     data.plot.do <- do_it()
-    boxplot(data.plot.do, main = "After Do")
-    genomatrix <<- data.plot.do
+    boxplot(data.plot.do[-1], main = "After Do")
   })
   
   output$downloadData <- downloadHandler(
@@ -89,7 +88,7 @@ server <- function(input, output) {
     },
     content = function(file) {
 
-      contents.table <- cbind(datainFile()[1], do_it())
+      contents.table <- do_it()
       write_delim(contents.table, file, delim = "\t",na = "")
     },
     contentType = "text/plain"
