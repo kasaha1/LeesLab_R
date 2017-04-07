@@ -15,7 +15,8 @@ output: html_document
 ##  Group dataset must have the first column as sample list & the second column as group
 
 [exmaple file](example_dataset/supervisedClustering_group_for_TCGA_sarcoma.txt)  
-![example dataset](example_dataset/groupDataset_supervisedClustering.jpg)  
+![example dataset](Figures/groupDataset_supervisedClustering.jpg)
+
 
 
 ```{r}
