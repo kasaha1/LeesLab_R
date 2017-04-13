@@ -13,7 +13,7 @@ in.file_testDataset <- file.choose()
 Do_median_centering <- T
 Do_divid_by_STD <- T
 
-Do_cross_validation <- FALSE # you can choose "TRUE" or "FALSE"
+Do_cross_validation <- T # you can choose "TRUE" or "FALSE"
 #===================================================================
 
 
@@ -206,7 +206,7 @@ groupSet <- join_dataset[c(1,(ncol(trainingSet_t)+1):ncol(join_dataset))]
 ####################### BCBCSF -------------------
 ## training data
 X_tr <- trainingSet_t[-1] %>% as.matrix()
-y_tr <- groupSet$group
+y_tr <- groupSet$group %>% as.factor %>% as.numeric()
 ## test data
 X_ts <- testSet_t[-1] %>% as.matrix()
 y_ts <- testSet_t[1]
@@ -254,6 +254,7 @@ dev.off()
 
 
 if(Do_cross_validation){
+  
   ##########################################################################
   ############################ cross validation ############################
   ##########################################################################
@@ -269,9 +270,6 @@ if(Do_cross_validation){
   validation <- eval_pred (out_pred = cv_pred, y_ts = y_tr)
   val_probs_at_truelabels <- validation$probs_at_truelabels %>% as.data.frame()
   val_probs_at_truelabels <- cbind(groupSet,val_probs_at_truelabels)
-  val_probs_at_truelabels$group[val_probs_at_truelabels$group=="1"] <- group_selected
-  val_probs_at_truelabels$group[val_probs_at_truelabels$group=="2"] <- "others"
-  colnames(val_probs_at_truelabels)[3] <- "probability_at_truelabels"
   val_summary <- validation$summary
 
   write_delim(x = val_probs_at_truelabels,path = file.path(dir.Out,"crossVaildation.txt"),delim = "\t")
@@ -320,67 +318,79 @@ if(Do_cross_validation){
 #   flitered_table <- inner_join(filinterd_list,data.process_1_a,by=c("gene"="sample"))
 #   flitered_table <- inner_join(flitered_table,data.process_1_b,by=c("gene"="sample"))[-c(2)]
 #
-#   # drawing supervised cluster----------------------------------------------------------------
-  #
-  # flitered_table_medianCentering <- geneMedianCentering(data.process_1)
-  # data.clustering_heatmap <- flitered_table_medianCentering[-1]
-  #
-  # row.names(data.clustering_heatmap) <- t(flitered_table_medianCentering[1])
-  # # strip_colors <- rainbow_hcl(length(levels(groupdata$group)))[as.numeric(groupdata$group)]
-  #
-  #
-  # data_melted <- melt(data.clustering_heatmap,id.vars = 0)
-  # intensity_heatmap <- 0.30
-  # v_1 <- quantile(data_melted$value,probs = intensity_heatmap)
-  # v_2 <- quantile(data_melted$value,probs = (1-intensity_heatmap))
-  # colors_break = unique(c(seq(min(data_melted$value),v_1,length=100),seq(v_1,v_2,length=100),seq(v_2,max(data_melted$value),length=100)))
-  # my_palette <- colorRampPalette(c("green", "black", "red"))(n = 297)
-  #
-  # if(!file.exists(dir.Out))dir.create(dir.Out)
-  # cairo_pdf(file.path(dir.Out,"supervisedHeatmap.pdf"),width = 15, height = 10,pointsize = 12)
-  #
-  # heatmap.2(as.matrix(data.clustering_heatmap),
-  #           # main = "Heatmap for the data set",
-  #           # srtCol = 20,
-  #           dendrogram = "none",
-  #           Rowv = F,
-  #           Colv = F, # this to make sure the columns are not ordered
-  #           # margins =c(5,0.1),
-  #           # key.xlab = "Cm",
-  #           # denscol = "grey",
-  #           density.info = "density",
-  #           breaks=colors_break,
-  #           #RowSideColors = strip_colors, # to add nice colored strips
-  #           # ColSideColors = strip_colors,
-  #           col = my_palette,
-  #           trace="none",
-  #           cexRow = 0.3,
-  #           symm=F,symkey=F,symbreaks=T, scale="none"
-  # )
-  #
-  # dev.off()
-  #
-  # bmp(file.path(dir.Out,"supervisedHeatmap.bmp"),width = 1000, height = 700,pointsize = 12, bg = "white")
-  # heatmap.2(as.matrix(data.clustering_heatmap),
-  #           # main = "Heatmap for the data set",
-  #           # srtCol = 20,
-  #           dendrogram = "none",
-  #           Rowv = F,
-  #           Colv = F, # this to make sure the columns are not ordered
-  #           # margins =c(5,0.1),
-  #           # key.xlab = "Cm",
-  #           # denscol = "grey",
-  #           density.info = "density",
-  #           breaks=colors_break,
-  #           #RowSideColors = strip_colors, # to add nice colored strips
-  #           # ColSideColors = strip_colors,
-  #           col = my_palette,
-  #           trace="none",
-  #           cexRow = 0.3,
-  #           symm=F,symkey=F,symbreaks=T, scale="none"
-  # )
-  # dev.off()
-  #
-  # write_delim(x = data.process,path = file.path(dir.Out,"2_table_supervisedClustering.txt"),delim = "\t")
-  #
+
+temp.join <- inner_join(trainingSet,testSet,by=c("Symbol"="Symbol"))
+testSet.ordered <- cbind(temp.join[,1],temp.join[(ncol(trainingSet)+1):ncol(temp.join)])
+testSet.ordered_t <- testSet.ordered %>% matrixTranspositionXY()
+temp.join.group <- inner_join(testSet.ordered_t,resultTable,by=c("sample"="sample"))
+temp.join.group.ordered <- temp.join.group %>% arrange(group)
+testSet.ordered_t <- temp.join.group.ordered[1:ncol(testSet.ordered_t)]
+testSet.ordered.row.col <- testSet.ordered_t %>% matrixTranspositionXY()
+
+#colnames(testSet.ordered)[1] <- "gene"
+
+
+#  drawing supervised cluster----------------------------------------------------------------
+
+flitered_table_medianCentering <- geneMedianCentering(testSet.ordered.row.col)
+data.clustering_heatmap <- flitered_table_medianCentering[-1]
+
+row.names(data.clustering_heatmap) <- t(flitered_table_medianCentering[1])
+# strip_colors <- rainbow_hcl(length(levels(groupdata$group)))[as.numeric(groupdata$group)]
+
+
+data_melted <- melt(data.clustering_heatmap,id.vars = 0)
+intensity_heatmap <- 0.30
+v_1 <- quantile(data_melted$value,probs = intensity_heatmap)
+v_2 <- quantile(data_melted$value,probs = (1-intensity_heatmap))
+colors_break = unique(c(seq(min(data_melted$value),v_1,length=100),seq(v_1,v_2,length=100),seq(v_2,max(data_melted$value),length=100)))
+my_palette <- colorRampPalette(c("green", "black", "red"))(n = 297)
+
+if(!file.exists(dir.Out))dir.create(dir.Out)
+cairo_pdf(file.path(dir.Out,"supervisedHeatmap.pdf"),width = 15, height = 10,pointsize = 12)
+
+heatmap.2(as.matrix(data.clustering_heatmap),
+          # main = "Heatmap for the data set",
+          # srtCol = 20,
+          dendrogram = "none",
+          Rowv = F,
+          Colv = F, # this to make sure the columns are not ordered
+          # margins =c(5,0.1),
+          # key.xlab = "Cm",
+          # denscol = "grey",
+          density.info = "density",
+          breaks=colors_break,
+          #RowSideColors = strip_colors, # to add nice colored strips
+          # ColSideColors = strip_colors,
+          col = my_palette,
+          trace="none",
+          cexRow = 0.3,
+          symm=F,symkey=F,symbreaks=T, scale="none"
+)
+
+dev.off()
+
+bmp(file.path(dir.Out,"supervisedHeatmap.bmp"),width = 1000, height = 700,pointsize = 12, bg = "white")
+heatmap.2(as.matrix(data.clustering_heatmap),
+          # main = "Heatmap for the data set",
+          # srtCol = 20,
+          dendrogram = "none",
+          Rowv = F,
+          Colv = F, # this to make sure the columns are not ordered
+          # margins =c(5,0.1),
+          # key.xlab = "Cm",
+          # denscol = "grey",
+          density.info = "density",
+          breaks=colors_break,
+          #RowSideColors = strip_colors, # to add nice colored strips
+          # ColSideColors = strip_colors,
+          col = my_palette,
+          trace="none",
+          cexRow = 0.3,
+          symm=F,symkey=F,symbreaks=T, scale="none"
+)
+dev.off()
+
+write_delim(x = testSet.ordered.row.col,path = file.path(dir.Out,"2_table_supervisedClustering.txt"),delim = "\t")
+
 
