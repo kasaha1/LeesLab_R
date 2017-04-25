@@ -1,0 +1,133 @@
+---
+title: "MEGENA_basic"
+author: "Kang sanghee"
+date: "April 25, 2017"
+output: html_document
+---
+
+```{r}
+
+
+setwd("C:/Users/SKang2/Desktop/kk") ## <-- input your folder
+
+data.raw <- read_delim("C:/Users/SKang2/Desktop/kk/genomicMatrix_1.txt",delim="/t") ## <-- input your DATA
+
+
+###---------- processing-----
+
+
+
+## To install Packages-------------
+instPak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg))
+  install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","MEGENA")
+instPak (packages)
+#-----------------------------
+
+data.megena <- data.raw[-1] %>% as.matrix()
+rownames(data.megena) <-data.raw[1] %>% t %>% as.vector()
+
+
+datExpr <- data.megena
+# data(Sample_Expression)
+
+
+library(MEGENA)
+
+# input parameters
+n.cores <- 4; # number of cores/threads to call for PCP
+doPar <-TRUE; # do we want to parallelize?
+method = "pearson" # method for correlation. either pearson or spearman.
+FDR.cutoff = 0.05 # FDR threshold to define significant correlations upon shuffling samples.
+v.signed = FALSE # signed or unsigned correlation efficiency (TRUE/FALSE)
+module.pval = 0.05 # module significance p-value. Recommended is 0.05.
+
+hub.pval = 0.05 # connectivity significance p-value based random tetrahedral networks
+cor.perm = 10; # number of permutations for calculating FDRs for all correlation pairs.
+hub.perm = 100; # number of permutations for calculating connectivity significance p-value.
+
+# annotation to be done on the downstream
+annot.table=NULL
+id.col = 1
+symbol.col= 2
+###########
+
+if (doPar & getDoParWorkers() == 1)
+{
+  cl <- parallel::makeCluster(n.cores)
+  registerDoParallel(cl)
+  # check how many workers are there
+  cat(paste("number of cores to use:",getDoParWorkers(),"\n",sep = ""))
+}
+
+
+
+ijw <- calculate.correlation(datExpr,doPerm = cor.perm,doPar = doPar,num.cores = n.cores,method = method,
+                             FDR.cutoff = FDR.cutoff,n.increment = 100,is.signed = v.signed,
+                             output.permFDR = TRUE,output.corTable = TRUE,saveto = NULL)
+
+el <- calculate.PFN(ijw[,1:3],doPar = doPar,num.cores = n.cores,keep.track = FALSE)
+write_delim(el,"cytoscapeData.txt", delim = "\t")
+
+g <- graph.data.frame(el,directed = FALSE)
+
+##### perform MCA clustering.
+MEGENA.output <- do.MEGENA(g,
+                           mod.pval = module.pval,hub.pval = hub.pval,remove.unsig = TRUE,
+                           min.size = 10,max.size = vcount(g)/2,
+                           doPar = doPar,num.cores = n.cores,n.perm = hub.perm,
+                           save.output = T)
+
+###### unregister cores as these are not needed anymore.
+if (getDoParWorkers() > 1)
+{
+  env <- foreach:::.foreachGlobals
+  rm(list=ls(name=env), pos=env)
+}
+
+summary.output <- MEGENA.ModuleSummary(MEGENA.output,
+                                       mod.pvalue = module.pval,hub.pvalue = hub.pval,
+                                       min.size = 10,max.size = vcount(g)/2,
+                                       annot.table = annot.table,id.col = id.col,symbol.col = symbol.col,
+                                       output.sig = TRUE)
+
+if (!is.null(annot.table))
+{
+  # update annotation to map to gene symbols
+  V(g)$name <- paste(annot.table[[symbol.col]][match(V(g)$name,annot.table[[id.col]])],V(g)$name,sep = "|")
+  summary.output <- output[c("mapped.modules","module.table")]
+  names(summary.output)[1] <- "modules"
+}
+
+print(head(summary.output$modules,2))
+
+##-------------- graph --------
+
+
+### plot some momdule
+pnet.obj <- plot_module(output.summary = summary.output,PFN = g,subset.module = "c1_3",
+                        layout = "kamada.kawai",label.hubs.only = TRUE,
+                        gene.set = NULL,color.code =  "grey",
+                        output.plot = FALSE,out.dir = "modulePlot",
+                        col.names = c("magenta","green","cyan"),
+                        label.scaleFactor = 20,hubLabel.col = "black",hubLabel.sizeProp = 1,show.topn.hubs = Inf,show.legend = TRUE)
+
+print(pnet.obj[[1]])
+
+### plot module hierarchy
+module.table <- summary.output$module.table
+colnames(module.table)[1] <- "id" # first column of module table must be labelled as "id".
+
+hierarchy.obj <- plot_module_hierarchy(module.table = module.table,label.scaleFactor = 0.15,
+                                       arrow.size = 0.03,node.label.color = "blue")
+#X11();
+print(hierarchy.obj[[1]])
+
+```
+
