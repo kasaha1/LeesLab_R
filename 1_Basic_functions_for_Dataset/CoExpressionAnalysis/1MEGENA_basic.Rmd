@@ -13,7 +13,7 @@ setwd("C:/Users/SKang2/Desktop/kk") ## <-- input your folder for output
 data.raw <- read_delim("C:/Users/SKang2/Desktop/kk/genomicMatrix_1.txt",delim="\t") ## <-- input your DATA
 
 # input parameters
-n.cores <- 4; # number of cores/threads to call for PCP
+n.cores <- 2; # number of cores/threads to call for PCP
 doPar <-TRUE; # do we want to parallelize?
 method = "pearson" # method for correlation. either pearson or spearman.
 FDR.cutoff = 0.05 # FDR threshold to define significant correlations upon shuffling samples.
