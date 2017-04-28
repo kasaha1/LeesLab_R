@@ -7,6 +7,7 @@ output: html_document
 
 ```{r}
 ## data input
+library(readr)
 
 setwd("C:/Users/SKang2/Desktop/kk") ## <-- input your folder for output
 
