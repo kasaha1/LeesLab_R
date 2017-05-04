@@ -84,6 +84,10 @@ MEGENA.output <- do.MEGENA(g,
                            min.size = 10,max.size = vcount(g)/2,
                            doPar = doPar,num.cores = n.cores,n.perm = hub.perm,
                            save.output = T)
+                           
+multiscale_nodeSummary.table <- MEGENA.output$node.summary
+write_delim(multiscale_nodeSummary.table,"multiscale_nodeSummary.txt",delim = "\t")
+
 
 ###### unregister cores as these are not needed anymore.
 if (getDoParWorkers() > 1)
@@ -97,6 +101,9 @@ summary.output <- MEGENA.ModuleSummary(MEGENA.output,
                                        min.size = 10,max.size = vcount(g)/2,
                                        annot.table = annot.table,id.col = id.col,symbol.col = symbol.col,
                                        output.sig = TRUE)
+module.table.output<- summary.output$module.table
+write_delim(module.table.output,"module.table.output.txt",delim = "\t")
+
 
 if (!is.null(annot.table))
 {
