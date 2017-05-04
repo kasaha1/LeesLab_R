@@ -178,7 +178,7 @@ resultKS.elim <- runTest(GOdata, algorithm = "elim", statistic = "ks")
 
 allRes <- GenTable(GOdata, classicFisher = resultFisher,
                    classicKS = resultKS, elimKS = resultKS.elim,
-                   orderBy = "elimKS", ranksOf = "classicFisher",topNodes =10,,numChar = 100)
+                   orderBy = "elimKS", ranksOf = "classicFisher",topNodes =10,numChar = 100)
 res.temp <- cbind(moduleName,allRes)
 res.table <- rbind(res.table,res.temp)
 }
