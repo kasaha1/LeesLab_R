@@ -112,14 +112,14 @@ print(head(summary.output$modules,2))
 
 
 ### plot some momdule
-pnet.obj <- plot_module(output.summary = summary.output,PFN = g,subset.module = "c1_3",
-                        layout = "kamada.kawai",label.hubs.only = TRUE,
-                        gene.set = NULL,color.code =  "grey",
-                        output.plot = FALSE,out.dir = "modulePlot",
-                        col.names = c("magenta","green","cyan"),
-                        label.scaleFactor = 20,hubLabel.col = "black",hubLabel.sizeProp = 1,show.topn.hubs = Inf,show.legend = TRUE)
+# pnet.obj <- plot_module(output.summary = summary.output,PFN = g,subset.module = "c1_3",
+#                        layout = "kamada.kawai",label.hubs.only = TRUE,
+#                        gene.set = NULL,color.code =  "grey",
+#                        output.plot = FALSE,out.dir = "modulePlot",
+#                        col.names = c("magenta","green","cyan"),
+#                        label.scaleFactor = 20,hubLabel.col = "black",hubLabel.sizeProp = 1,show.topn.hubs = Inf,show.legend = TRUE)
 
-print(pnet.obj[[1]])
+# print(pnet.obj[[1]])
 
 ### plot module hierarchy
 module.table <- summary.output$module.table
@@ -128,7 +128,57 @@ colnames(module.table)[1] <- "id" # first column of module table must be labelle
 hierarchy.obj <- plot_module_hierarchy(module.table = module.table,label.scaleFactor = 0.15,
                                        arrow.size = 0.03,node.label.color = "blue")
 #X11();
+cairo_pdf("hierarchyModules.pdf",width = 15, height = 10,pointsize = 12)
 print(hierarchy.obj[[1]])
+dev.off()
+
+# -----------------  Gene Ontology ----------- !!!
+instPak_bioc <- function(pkg_b){
+  new.pkg <- pkg_b[!(pkg_b %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)){
+    source("https://bioconductor.org/biocLite.R")
+    biocLite(suppressUpdates=TRUE,suppressAutoUpdate=FALSE,ask=FALSE)
+    biocLite(pkg=pkg_b,suppressUpdates=TRUE,suppressAutoUpdate=FALSE,ask=FALSE)
+  }
+  sapply(pkg_b, require, character.only = TRUE)
+}
+
+#------------- Bioc_Packages ----
+packages_bioc <- c("org.Hs.eg.db","topGO")
+instPak_bioc (packages_bioc)
+#-----------------------------
+
+GeneTable <- read_delim("multiscale_nodeSummary.txt",delim="\t")
+significantModuleTable <- read_delim("multiscale_significant.modules.txt",delim = "\t",col_names = F)
+
+res.table <- matrix(nrow = 1,ncol = 10) %>% as.data.frame()
+colnames(res.table) <- c("moduleName","GO.ID","Term","Annotated" ,"Significant","Expected","Rank in classicFisher","classicFisher","classicKS","elimKS")
+for(i in c(1:nrow(significantModuleTable))) {
+moduleName <- significantModuleTable[i,1] %>% t %>% as.vector()
+moduleMemeber <- significantModuleTable[i,2:ncol(significantModuleTable)] %>% t %>% na.omit() %>% as.vector()
+temp_geneTable <- GeneTable %>% filter(id %in% moduleMemeber)
+
+# topoGo preparation
+geneUniverse.table <- temp_geneTable[c("id","node.weightedCF")]
+geneUniverse <- geneUniverse.table$node.weightedCF %>% t %>% as.vector()
+names(geneUniverse) <- geneUniverse.table$id %>% t %>% as.vector()
+
+# topGo processing
+GOdata <- new("topGOdata", description = "BPforModules",ontology = "BP", allGenes = geneUniverse, geneSel = function(x)x, nodeSize = 10, annot = annFUN.org, ID = "alias", mapping = "org.Hs.eg")
+resultFisher <- runTest(GOdata, algorithm = "classic", statistic = "fisher")
+resultKS <- runTest(GOdata, algorithm = "classic", statistic = "ks")
+resultKS.elim <- runTest(GOdata, algorithm = "elim", statistic = "ks")
+
+allRes <- GenTable(GOdata, classicFisher = resultFisher,
+                   classicKS = resultKS, elimKS = resultKS.elim,
+                   orderBy = "elimKS", ranksOf = "classicFisher",topNodes =10)
+res.temp <- cbind(moduleName,allRes)
+res.table <- rbind(res.table,res.temp)
+}
+res.table <- res.table[-1,]
+
+write_delim(res.table,"BP_GOtable.txt",delim = "\t")
+
 
 ```
 
