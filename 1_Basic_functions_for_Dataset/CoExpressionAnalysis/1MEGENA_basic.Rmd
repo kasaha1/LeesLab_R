@@ -158,29 +158,49 @@ instPak_bioc (packages_bioc)
 GeneTable <- read_delim("multiscale_nodeSummary.txt",delim="\t")
 significantModuleTable <- read_delim("multiscale_significant.modules.txt",delim = "\t",col_names = F)
 
-res.table <- matrix(nrow = 1,ncol = 10) %>% as.data.frame()
-colnames(res.table) <- c("moduleName","GO.ID","Term","Annotated" ,"Significant","Expected","Rank in classicFisher","classicFisher","classicKS","elimKS")
+res.table <- matrix(nrow = 1,ncol = 11) %>% as.data.frame()
+colnames(res.table) <- c("moduleName","GO.ID","Term","Annotated" ,"Significant","Expected","Rank in classicFisher","classicFisher","classicKS","elimKS","geneMember")
 for(i in c(1:nrow(significantModuleTable))) {
 moduleName <- significantModuleTable[i,1] %>% t %>% as.vector()
 moduleMemeber <- significantModuleTable[i,2:ncol(significantModuleTable)] %>% t %>% na.omit() %>% as.vector()
 temp_geneTable <- GeneTable %>% filter(id %in% moduleMemeber)
 
 # topoGo preparation
-geneUniverse.table <- temp_geneTable[c("id","node.weightedCF")]
-geneUniverse <- geneUniverse.table$node.weightedCF %>% t %>% as.vector()
+geneUniverse.table <- temp_geneTable[c("id","node.strength")]
+geneUniverse.table$node.strength <- 1/geneUniverse.table$node.strength
+# consisit of gene universe
+geneUniverse.table <- geneUniverse.table  %>% arrange(node.strength) %>% filter(row_number() < 51)
+geneUniverse <- geneUniverse.table$node.strength %>% t %>% as.vector()
 names(geneUniverse) <- geneUniverse.table$id %>% t %>% as.vector()
 
 # topGo processing
 GOdata <- new("topGOdata", description = "BPforModules",ontology = "BP", allGenes = geneUniverse, geneSel = function(x)x, nodeSize = 10, annot = annFUN.org, ID = "alias", mapping = "org.Hs.eg")
-resultFisher <- runTest(GOdata, algorithm = "classic", statistic = "fisher")
-resultKS <- runTest(GOdata, algorithm = "classic", statistic = "ks")
-resultKS.elim <- runTest(GOdata, algorithm = "elim", statistic = "ks")
+tryCatch({
+    resultFisher <- runTest(GOdata, algorithm = "classic", statistic = "fisher")
+    resultKS <- runTest(GOdata, algorithm = "classic", statistic = "ks")
+    resultKS.elim <- runTest(GOdata, algorithm = "elim", statistic = "ks")
+    allRes <- GenTable(GOdata, classicFisher = resultFisher,
+                       classicKS = resultKS, elimKS = resultKS.elim,
+                       orderBy = "elimKS", ranksOf = "classicFisher",topNodes =10,numChar = 100)
 
-allRes <- GenTable(GOdata, classicFisher = resultFisher,
-                   classicKS = resultKS, elimKS = resultKS.elim,
-                   orderBy = "elimKS", ranksOf = "classicFisher",topNodes =10,numChar = 100)
-res.temp <- cbind(moduleName,allRes)
-res.table <- rbind(res.table,res.temp)
+    # anot gene add to table
+    allGO <-  genesInTerm(GOdata)
+    allRes$geneMember <- "geneList"
+    for (j in c(1:nrow(allRes))) {
+      allRes[j,10] <- paste(allGO[allRes[j,1]] %>% unlist(),collapse = ",")
+
+    }
+
+    # result merge
+    res.temp <- cbind(moduleName,allRes)
+    res.table <- rbind(res.table,res.temp)
+  }
+  ,warning = function(w) {
+
+  }, error = function(e) {
+    print(paste(moduleName," cannot annotate ontology...."))
+  }, finally = {
+  })
 }
 res.table <- res.table[-1,]
 
