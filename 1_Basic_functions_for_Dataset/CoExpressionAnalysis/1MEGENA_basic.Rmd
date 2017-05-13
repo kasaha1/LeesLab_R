@@ -43,7 +43,7 @@ instPak <- function(pkg){
 }
 
 #------------- Packages ----
-packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","MEGENA")
+packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","MEGENA","Hmisc")
 instPak (packages)
 #-----------------------------
 
@@ -74,7 +74,21 @@ ijw <- calculate.correlation(datExpr,doPerm = cor.perm,doPar = doPar,num.cores =
                              output.permFDR = TRUE,output.corTable = TRUE,saveto = NULL)
 
 el <- calculate.PFN(ijw[,1:3],doPar = doPar,num.cores = n.cores,keep.track = FALSE)
-write_delim(el,"cytoscapeData.txt", delim = "\t")
+
+#### make cytoscape data
+cor.cal.matrix <- rcorr(t(datExpr))
+temp.cor <- cor.cal.matrix$r
+temp.p <- cor.cal.matrix$P
+
+temp.cor.1 <- apply(el,1,function(x){
+  temp <- temp.cor[x[1],x[2]]
+  if (temp >=0) {return("positive")}else{return("negative")}
+  })
+temp.p.1 <- apply(el,1,function(x){temp.p[x[1],x[2]]})
+cytoscpaeData <- cbind(el,temp.cor.1,temp.p.1)
+
+write_delim(cytoscpaeData,"cytoscapeData.txt", delim = "\t")
+### 
 
 g <- graph.data.frame(el,directed = FALSE)
 
