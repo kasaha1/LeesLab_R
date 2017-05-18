@@ -134,6 +134,7 @@ pca <- prcomp( data.PCA[,-1], scale.= TRUE )
 pca3d( pca, group= data.group[,2],
 fancy= F, bg= "white",
 axes.color= "dimgray", new= T,show.group.labels=T
+,legend = c("bottomleft")
 # ,palette = c("#00AFEF","#00A859","#C8C5E2","#F5874F","#A8518A","#ED3237")
 )
 makeMoviePCA(dir=dir.Out)
