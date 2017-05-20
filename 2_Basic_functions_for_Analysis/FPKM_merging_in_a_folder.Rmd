@@ -5,12 +5,15 @@ date: "May 20, 2017"
 output: html_document
 ---
 This is a code that combines several gene expression files in one folder into one file.
-For example, there are several files in a folder that have the following names:
+For example, there are several files in a folder that have the following names:  
+
 ![folderContent](figures/FPKM_merging_in_a_folder_folderImage.png)
 
 
-These files have the following format: (NOTE: The column name is not important. Only the column order is important.ex: gene, expression value)
-![fileContent](figures/FPKM_merging_in_a_folder_fileImage.png)
+These files have the following format: (NOTE: The column name is not important. Only the column order is important.ex: gene, expression value)  
+
+![fileContent](figures/FPKM_merging_in_a_folder_fileImage.png)  
+
 
 When you run the entire program at once, a window to select the folder appears. If you select folder, the rest of the operation will proceed automatically.
 
