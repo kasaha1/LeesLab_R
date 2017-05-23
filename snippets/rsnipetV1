@@ -160,3 +160,8 @@ snippet myGitinstall
 	
 	devtools::install_github("kasaha1/kasaBasicFunctions")
 	library(kasaBasicFunctions)
+	
+snippet myMemoryReset
+	# clear memory
+	rm(list = ls()[!(ls() %in% c("${1:variable}","${2:variable}","${3:variable}"))])
+	gc()
