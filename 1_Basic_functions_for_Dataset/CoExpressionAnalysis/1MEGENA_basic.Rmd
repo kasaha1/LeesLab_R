@@ -188,7 +188,7 @@ geneUniverse <- geneUniverse.table$node.strength %>% t %>% as.vector()
 names(geneUniverse) <- geneUniverse.table$id %>% t %>% as.vector()
 
 # topGo processing
-GOdata <- new("topGOdata", description = "BPforModules",ontology = "BP", allGenes = geneUniverse, geneSel = function(x)x, nodeSize = 10, annot = annFUN.org, ID = "alias", mapping = "org.Hs.eg")
+GOdata <- new("topGOdata", description = "BPforModules",ontology = "BP", allGenes = geneUniverse, geneSel = function(x)x, nodeSize = 5, annot = annFUN.org, ID = "alias", mapping = "org.Hs.eg")
 tryCatch({
     resultFisher <- runTest(GOdata, algorithm = "classic", statistic = "fisher")
     resultKS <- runTest(GOdata, algorithm = "classic", statistic = "ks")
