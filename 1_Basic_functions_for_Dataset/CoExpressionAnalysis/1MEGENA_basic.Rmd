@@ -80,6 +80,11 @@ ijw <- calculate.correlation(datExpr,doPerm = cor.perm,doPar = doPar,num.cores =
                              FDR.cutoff = FDR.cutoff,n.increment = 100,is.signed = v.signed,
                              output.permFDR = TRUE,output.corTable = TRUE,saveto = NULL)
 save.image()
+
+# clear memory
+rm(list = c("data_filtered.1","data_filtered","data.prefilter","data.raw","datExpr"))
+gc()
+
 el <- calculate.PFN(ijw[,1:3],doPar = doPar,num.cores = n.cores,keep.track = FALSE)
 save.image()
 #### make cytoscape data
