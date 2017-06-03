@@ -21,6 +21,8 @@ rownames(data.prefilter) <- data.raw[1] %>% t %>% as.vector()
 data_filtered <-  filterGenes(data.prefilter,filterTypes = c("central"), filterCentralType = "median", filterCentralPercentile = 0.3) # low average removal, ;low SD/average removal
 data_filtered <- filterGenes(data_filtered,filterTypes = c("dispersion"),filterDispersionType = "cv",filterDispersionPercentile = 0.3) # low average removal, ;low SD/average removal
 
+data_filtered.1 <- cbind(rownames(data_filtered),data_filtered) %>% as.data.frame()
+write_csv(data_filtered.1,"data_filtered.frame.csv")
 
 datExpr <- data_filtered
 # data(Sample_Expression)
