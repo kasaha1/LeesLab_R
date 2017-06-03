@@ -12,6 +12,20 @@ library(readr)
 setwd("C:/Users/SKang2/Desktop/kk") ## <-- input your folder for output
 
 data.raw <- read_delim("C:/Users/SKang2/Desktop/kk/genomicMatrix_1.txt",delim="\t") ## <-- input your DATA
+data.raw <- data.raw %>% kasa.duplicationRemovalBySD()
+
+data.prefilter <- data.raw[-1] %>% as.matrix()
+rownames(data.prefilter) <- data.raw[1] %>% t %>% as.vector()
+
+
+data_filtered <-  filterGenes(data.prefilter,filterTypes = c("central"), filterCentralType = "median", filterCentralPercentile = 0.3) # low average removal, ;low SD/average removal
+data_filtered <- filterGenes(data_filtered,filterTypes = c("dispersion"),filterDispersionType = "cv",filterDispersionPercentile = 0.3) # low average removal, ;low SD/average removal
+
+
+datExpr <- data_filtered
+# data(Sample_Expression)
+
+
 
 # input parameters
 n.cores <- 2; # number of cores/threads to call for PCP
@@ -46,15 +60,6 @@ instPak <- function(pkg){
 packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","MEGENA","Hmisc")
 instPak (packages)
 #-----------------------------
-
-data.megena <- data.raw[-1] %>% as.matrix()
-rownames(data.megena) <-data.raw[1] %>% t %>% as.vector()
-
-
-datExpr <- data.megena
-# data(Sample_Expression)
-
-
 
 
 ###########
