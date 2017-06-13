@@ -20,7 +20,7 @@ packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","M
 kasa.instPak (packages)
 #-----------------------------
 #------------- Bioc_Packages ----
-packages_bioc <- c("org.Hs.eg.db","topGO")
+packages_bioc <- c("org.Hs.eg.db","topGO","impute")
 kasa.instPak_bioc (packages_bioc)
 
 #-----------------------------
