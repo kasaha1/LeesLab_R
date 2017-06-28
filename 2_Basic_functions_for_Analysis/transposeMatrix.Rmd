@@ -1,0 +1,46 @@
+---
+title: "transposeMatrix"
+author: "Kang sanghee"
+date: "June 28, 2017"
+output: html_document
+---
+
+# This code was created to change the X and Y axes
+
+```{r}
+# transpose
+
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+in.file <- file.choose()
+#===================================================================
+dir     <- dirname(in.file)
+
+dirOut <- paste0(dir,"/output_transpose")
+if(!file.exists(dirOut)){  dir.create(dirOut)}
+
+in.file.name <- unlist(strsplit(basename(in.file),"\\.txt"))
+out.file <- paste(in.file.name,"_","transpose.txt",sep="")
+
+# install Kang's basic functions package from the git-hub
+if ("devtools" %in% installed.packages()[, "Package"]){cat("devtools is installed")}else(install.packages("devtools"))
+
+devtools::install_github("kasaha1/kasaBasicFunctions")
+library(kasaBasicFunctions)
+# install Kang's basic functions package from the git-hub
+#------------- Packages ----
+packages <- c("data.table","dplyr","readr")
+kasa.instPak (packages)
+
+# file read 
+data.raw <- fread(in.file) %>% as.data.frame()
+
+#processing
+data.tranpose <- data.raw %>% kasa.transposeMatrix()
+
+# output
+write_delim(x = data.tranpose, path =file.path(dirOut,out.file), delim = "\t",na = "")
+
+```
+
