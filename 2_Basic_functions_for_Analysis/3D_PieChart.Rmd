@@ -8,10 +8,12 @@ output: html_document
 
 # This is the code for drawing 3D Pie chart, exploding type.
 
-The data must have two columns named "group" and "fraction".
+The data must have two columns named "group" and "fraction".  
+
 ![example dataset](Figures/3D_PieChart_dataset.png)
 
-Then the result is as follows.  
+Then the result is as follows.    
+
 ![example result](Figures/3D_PieChart.png)
 
 You will get the output in pdf, editable in coreldraw.  
