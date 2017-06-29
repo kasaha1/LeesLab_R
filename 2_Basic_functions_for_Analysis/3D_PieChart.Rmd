@@ -10,11 +10,11 @@ output: html_document
 
 The data must have two columns named "group" and "fraction".  
 
-![example dataset](Figures/3D_PieChart_dataset.png)
+![example dataset](figures/3D_PieChart_dataset.png)
 
 Then the result is as follows.    
 
-![example result](Figures/3D_PieChart.png)
+![example result](figures/3D_PieChart.png)
 
 You will get the output in pdf, editable in coreldraw.  
 
