@@ -1,0 +1,5 @@
+group	fraction
+A	20
+B	32
+O	32
+AB	16
