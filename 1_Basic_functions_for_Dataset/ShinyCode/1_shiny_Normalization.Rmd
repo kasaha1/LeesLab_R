@@ -32,11 +32,6 @@ if (!("limma" %in% installed.packages()[, "Package"])) {
 library(limma)
 options(shiny.maxRequestSize = 3000 * 1024 ^ 2)
 
-flooringFunction <- function(x) {
-  if(is.na(x)){return(x)}
-  if (x < 1) {x <- 1}
-  return(x)
-}
 
 # # # # #
 
@@ -55,7 +50,7 @@ server <- function(input, output) {
     M.nor <- data.plot[-1] %>% as.matrix()
     
     if (input$Flooring_after_Log2) {
-      M.nor <- apply(M.nor, c(1, 2), flooringFunction)
+      M.nor <- M.nor+1
       print("flooring done")
     }
     if (input$doLog2)
