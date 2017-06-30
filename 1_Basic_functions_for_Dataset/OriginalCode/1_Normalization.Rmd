@@ -9,14 +9,12 @@ output: html_document
 # Properties: user input
 #-------------------------------------------------------------------
 in.file <- file.choose()
-Start.col <- 2  # The Numeric-array-data starts at this column
-dir     <- dirname(in.file)
-doNoramlization <- TRUE
-doLog  <- TRUE # transform to log2 values TRUE or FALSE
-flooring_afterLog <- TRUE # TRUE or FALSE
-dirOut <- paste0(dir,"/output_norm")
-#===================================================================
 
+RMA_Noramlization <- TRUE
+Apply_Log2  <- TRUE # transform to log2 values TRUE or FALSE
+flooring_withLog <- TRUE # Log2(X+1) TRUE or FALSE
+
+#===================================================================
 
 ## To install Packages-------------
 instPak <- function(pkg){
@@ -32,10 +30,16 @@ if (!("limma" %in% installed.packages()[,"Package"])) {
 }
 
 #------------- Packages ----
-packages <- c("ggplot2", "dplyr","readr","colorspace")
+packages <- c("ggplot2", "dplyr","data.table","readr")
 instPak (packages) 
 library(limma)
 #-----------------------------
+
+
+# preparing
+dir     <- dirname(in.file)
+dirOut <- paste0(dir,"/output_norm")
+if(!file.exists(dirOut)){  dir.create(dirOut)} # Creat output data
 
 in.file.name=unlist(strsplit(basename(in.file),"\\.txt"))
 btwn_option = "quantile" # Options: "none"', '"scale"', '"quantile"','"Aquantile"', '"Gquantile"', '"Rquantile"', '"Tquantile"' or '"vsn"'
@@ -46,58 +50,42 @@ out.p.log = paste(in.file.name,"_","profile_normlized_log2.txt",sep="")
 
 
 # Input file Reading
-in.data = read_delim(in.file,delim ="\t",quote = "")
-in.data.edit <-data.frame(in.data[,(Start.col):ncol(in.data)])
+in.data = fread(in.file) %>% as.data.frame()
+
+data.m <- in.data[,-c(1)] %>% as.matrix()
 
 
-# Creat output data
+# flooring
 
-if(!file.exists(dirOut)){  dir.create(dirOut)}
+if (flooring_withLog) {
+  data.m <- data.m+1
+}
+
+# log2
+if (Apply_Log2) {
+  data.m <- log2(data.m)
+}
 
 
 # Normalization
-if (doNoramlization) {
-  M.nor <- normalizeBetweenArrays(as.matrix(in.data.edit),method=btwn_option)
-} else{
-  M.nor <- as.matrix(in.data.edit)
+if (RMA_Noramlization) {
+  data.m <- normalizeBetweenArrays(data.m,method=btwn_option)
 }
-
-# flooring
-if (flooring_afterLog) {
-    flooringFunction <- function(x){
-      if (x<1) {
-        x <- 1
-      }
-      return(x)
-    }
-    M.nor <- apply(M.nor,c(1,2),flooringFunction)
-  }
-
-# Option for Log 2 (option: "T", "F")
-if(doLog)
-{
-  
-  M.nor_log <- log2(M.nor)
-  data.out.log <-cbind(in.data[,1:(Start.col-1)], round(M.nor_log,4))
-  write_delim(x = data.out.log, path =file.path(dirOut,out.p.log), delim = "\t",na = "")
-
-}
-
 
 # Writing the output table
-data.out <-cbind(in.data[,1:(Start.col-1)], round(M.nor,4))
+data.out <-cbind(in.data[1], as.data.frame(round(data.m,5)))
 write_delim(x = data.out, path =file.path(dirOut,out.file), delim = "\t",na = "")
 
 
 # Boxplot for raw data
 jpeg(filename = file.path(dirOut,out.fig.1), width = 4000, height = 480, pointsize = 14, quality = 30, bg = "white", res = NA)
-boxplot(in.data.edit, main=paste("Boxplot of ", in.file.name," Before Between normalization"))
+boxplot(in.data[,-1], main=paste("Boxplot of ", in.file.name," Before Between normalization"))
 dev.off()
 
 
 # Boxplot for the data after Between-slide normalization
 jpeg(filename = file.path(dirOut,out.fig.2), width = 4000, height = 480, pointsize = 14, quality = 20, bg = "white", res = NA)
-boxplot(data.frame(M.nor), main=paste("Boxplot of ", in.file, " after Between normalization", "_", btwn_option, sep=""))
+boxplot(data.out[-1], main=paste("Boxplot of ", in.file, " after Between normalization", "_", btwn_option, sep=""))
 dev.off()
 
 ```
