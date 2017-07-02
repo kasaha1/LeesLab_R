@@ -17,16 +17,8 @@ You can make a palette from the picture
 simply you can use like that :  
     
 ```{r}
-#-----Input number of color---------
-numOfcolor <- 32
-#-----------------------------------
-library(kasaBasicFunctions)
-# install Kang's basic functions package from the git-hub
-#------------- Packages ----
-packages <- c("ggplot2", "dplyr", "readr", "data.table","jpeg","scales","paletter")
-kasa.instPak (packages)
-
-colours_vector <- palette_maker("C:/Users/kangs/Documents/Git_R/LeesLab_R/3_interesting_Code/figures/sacra_famiglia_canigiani.jpg", number_of_colors = numOfcolor) 
+library(paletter)
+colours_vector <- palette_maker(PictureFilePath, number_of_colors = 20) 
 ```
 
 
