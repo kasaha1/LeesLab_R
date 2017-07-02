@@ -10,6 +10,9 @@ build your palette from a picture
 
 You can make a palette from the picture  
 ![picture](figures/sacra_famiglia_canigiani.jpg)  
+![palette](figures/palette.png)  
+
+
 
 simply you can use like that :  
     
@@ -17,9 +20,13 @@ simply you can use like that :
 #-----Input number of color---------
 numOfcolor <- 32
 #-----------------------------------
-library(paletter)
-painting     <- readJPEG("sacra_famiglia_canigiani.jpg")   
-colours_vector <- palette_maker("sacra_famiglia_canigiani.jpg", number_of_colors = numOfcolor) 
+library(kasaBasicFunctions)
+# install Kang's basic functions package from the git-hub
+#------------- Packages ----
+packages <- c("ggplot2", "dplyr", "readr", "data.table","jpeg","scales","paletter")
+kasa.instPak (packages)
+
+colours_vector <- palette_maker("C:/Users/kangs/Documents/Git_R/LeesLab_R/3_interesting_Code/figures/sacra_famiglia_canigiani.jpg", number_of_colors = numOfcolor) 
 ```
 
 
