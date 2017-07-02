@@ -1,0 +1,7 @@
+sample	group
+siADNP1	KO
+siADNP2	KO
+siADNP3	KO
+SCR1	WT
+SCR2	WT
+SCR3	WT
