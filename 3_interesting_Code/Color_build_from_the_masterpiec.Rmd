@@ -9,12 +9,9 @@ build your palette from a picture
 [source](https://www.r-bloggers.com/how-to-build-a-color-palette-from-any-image-with-r-and-k-means-algo/)   
 
 You can make a palette from the picture  
-![picture](figures/sacra_famiglia_canigiani.jpg)  
-![palette](figures/palette.png)  
+![picture](figures/colorPalette.tif)  
 
-
-
-simply you can use like that :  
+After installation of "paletter" package from Git-Hub, simply you can use like that :  
     
 ```{r}
 library(paletter)
@@ -44,7 +41,7 @@ kasa.instPak (packages)
 
 
 # download.file("https://andreacirilloac.github.io/dataviz/images/sacra_famiglia_canigiani.jpg", "image.jpg")
-painting     <- readJPEG("sacra_famiglia_canigiani.jpg")
+painting     <- readJPEG("figures/sacra_famiglia_canigiani.jpg")
 
 dimension    <- dim(painting)
 painting_rgb <- data.frame(
@@ -59,8 +56,7 @@ show_col(rgb(k_means$centers))
 rgb(k_means$centers)
 
 #----------- simply-------------------
-painting     <- readJPEG("sacra_famiglia_canigiani.jpg")
-colours_vector <- palette_maker("sacra_famiglia_canigiani.jpg", number_of_colors = numOfcolor) #### 
+colours_vector <- palette_maker("figures/sacra_famiglia_canigiani.jpg", number_of_colors = numOfcolor) #### 
 
 
 #-----check------
@@ -69,6 +65,6 @@ ggplot(data = mtcars, aes(
   x = disp,
   y = hp,
   color = rownames(mtcars)
-))+geom_point(stat = 'identity', aes(size = cyl))+scale_color_manual(values = colours_vector)+theme_minimal()+geom_text(label = rownames(mtcars),color = 'grey40',check_overlap = TRUE) +  guides(size = FALSE) +  theme(legend.position ="bottom") +  labs(title = "disp vs hp")
+))+geom_point(stat = 'identity', aes(size = cyl))+scale_color_manual(values = colours_vector)+theme_minimal()+geom_text(label = rownames(mtcars),color = 'grey40',check_overlap = TRUE) +  guides(size = FALSE) +  theme(legend.position ="none") +  labs(title = "disp vs hp")
 ```
 
