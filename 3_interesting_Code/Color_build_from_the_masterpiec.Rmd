@@ -9,7 +9,7 @@ build your palette from a picture
 [source](https://www.r-bloggers.com/how-to-build-a-color-palette-from-any-image-with-r-and-k-means-algo/)   
 
 You can make a palette from the picture  
-![picture](figures/colorPalette.tif)  
+![picture](figures/colorPalette.png)  
 
 After installation of "paletter" package from Git-Hub, simply you can use like that :  
     
