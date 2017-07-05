@@ -30,18 +30,18 @@ numOfcolor <- 32
 if ("devtools" %in% installed.packages()[, "Package"]){cat("devtools is installed")}else(install.packages("devtools"))
 
 devtools::install_github("kasaha1/kasaBasicFunctions")
-devtools::install_github("andreacirilloac/paletter")
+
 library(kasaBasicFunctions)
 # install Kang's basic functions package from the git-hub
 #------------- Packages ----
 packages <- c("ggplot2", "dplyr", "readr", "data.table","jpeg","scales","paletter")
 kasa.instPak (packages)
-
+devtools::install_github("andreacirilloac/paletter")
 
 
 
 # download.file("https://andreacirilloac.github.io/dataviz/images/sacra_famiglia_canigiani.jpg", "image.jpg")
-painting     <- readJPEG("figures/sacra_famiglia_canigiani.jpg")
+painting     <- readJPEG("figures/a18.jpg")
 
 dimension    <- dim(painting)
 painting_rgb <- data.frame(
@@ -56,7 +56,7 @@ show_col(rgb(k_means$centers))
 rgb(k_means$centers)
 
 #----------- simply-------------------
-colours_vector <- palette_maker("figures/sacra_famiglia_canigiani.jpg", number_of_colors = numOfcolor) #### 
+colours_vector <- palette_maker("figures/a18.jpg", number_of_colors = numOfcolor) #### 
 
 
 #-----check------
