@@ -1,0 +1,128 @@
+---
+title: "limma_DEGsInMicroarray"
+author: "Sanghee Kang"
+date: "July 13, 2017"
+output: html_document
+---
+
+[limma vs. T-test](http://genomicsclass.github.io/book/pages/using_limma.html)  
+
+[limma manual](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwiUp7mttIXVAhVBRSYKHaRoAUcQFggsMAA&url=https%3A%2F%2Fwww.bioconductor.org%2Fpackages%2Fdevel%2Fbioc%2Fvignettes%2Flimma%2Finst%2Fdoc%2Fusersguide.pdf&usg=AFQjCNFggt-c5jOD204buU7cLAwVAy_SJg)
+
+
+
+```{r}
+#===================================================================
+# Properties: user input
+#-------------------------------------------------------------------
+print("Microarray data matrix..............")
+in.file.matrix <- file.choose()
+print("group data containing two columns,'sample' and 'group'.......")
+in.file.group <- file.choose()
+
+
+reference_group <- "A"
+
+#===================================================================
+
+dir     <- dirname(in.file.matrix)
+dirOut <- paste0(dir,"/output_limma_lmfit")
+if(!file.exists(dirOut)){  dir.create(dirOut)} # Creat output data
+
+# install Kang's basic functions package from the git-hub
+if ("devtools" %in% installed.packages()[, "Package"]){cat("devtools is installed")}else(install.packages("devtools"))
+
+devtools::install_github("kasaha1/kasaBasicFunctions")
+library(kasaBasicFunctions)
+
+# install Kang's basic functions package from the git-hub
+#------------- Packages ----
+packages <- c("tidyverse", "data.table")
+kasa.instPak (packages)
+#-----------------------------
+#------------- Bioc_Packages ----
+packages_bioc <- c("SpikeInSubset","genefilter","limma")
+kasa.instPak_bioc (packages_bioc)
+#-----------------------------
+
+data.raw <- fread(in.file.matrix) %>% as.data.frame()
+groupData <- fread(in.file.group)%>% as.data.frame()
+colnames(groupData) <- c("sample","group")
+colnames(data.raw)[1] <- "gene"
+
+# data matching
+data.raw.t <- data.raw %>% kasa.transposeMatrix()
+tmp <- kasa.matchingRow(groupData,data.raw.t,keycolX = "sample",keycolY ="sample")
+groupData <- tmp$dataframeX
+data.raw <- tmp$dataframeY %>% kasa.transposeMatrix()
+
+
+# data preparation
+dataMatrix <- data.raw[-1] %>% as.matrix()
+rownames(dataMatrix) <- data.raw[1] %>% t %>% as.vector()
+
+groupData$group.m <- 2
+groupData$group.m[groupData$group==reference_group] <- 1
+groupData.matrix <- groupData[-c(1,2)]
+groupData.matrix$group.m <- groupData.matrix$group.m %>% as.factor()
+rownames(groupData.matrix) <- groupData[1] %>% t %>% as.vector()
+
+# generating Expression set
+data.ExpressionSet <- ExpressionSet(assayData=dataMatrix)
+fac <- groupData.matrix$group.m
+
+# limma lmFit with empirical Bayes
+design.k=model.matrix(~ fac)
+
+fit <- lmFit(data.ExpressionSet, design=design.k)
+fit <- eBayes(fit)
+limma.result <- topTable(fit, coef=2, number=Inf, sort.by="none")
+
+
+limmares <- data.frame(dm=coef(fit)[,"fac2"], p.value=fit$p.value[,"fac2"])
+
+
+# T-test 
+rtt.group <- groupData
+rtt.group$group.m <- 1
+rtt.group$group.m[rtt.group$group==reference_group] <- 2
+rtt.groupData.matrix <- rtt.group[-c(1,2)]
+rtt.groupData.matrix$group.m <- rtt.groupData.matrix$group.m %>% as.factor()
+rownames(rtt.groupData.matrix) <- groupData[1] %>% t %>% as.vector()
+fac.rtt <- rtt.groupData.matrix$group.m
+
+rtt <- rowttests(exprs(data.ExpressionSet),fac.rtt)
+mask <- with(rtt, abs(dm) < 2 & p.value < .01)
+cols <- ifelse(mask,"#1E90FF","#949494")
+
+
+
+
+
+
+# results export
+
+limma.result.d <- limma.result %>% as.data.frame() %>% rownames_to_column()
+rtt.d <- rtt %>% as.data.frame() %>% rownames_to_column()
+
+write_csv(rtt.d,paste0(dirOut,"/T_test.csv"))
+write_csv(limma.result.d,paste0(dirOut,"/lmFit_eBayes.csv"))
+
+# plot export
+
+png(paste0(dirOut,"/limma_lmFit.png"),width = 700, height = 500,pointsize = 12, bg = "white")
+with(limmares, plot(dm, -log10(p.value),cex=.8, pch=16,
+                    col=cols,xlab="difference in means"))
+abline(h=2,v=c(-2,2), lty=2)
+dev.off()
+
+
+png(paste0(dirOut,"/T_test.png"),width = 700, height = 500,pointsize = 12, bg = "white")
+with(rtt, plot(-dm, -log10(p.value), cex=.8, pch=16,
+               xlab="difference in means",
+               col=cols))
+abline(h=2,v=c(-2,2), lty=2)
+dev.off()
+
+```
+
