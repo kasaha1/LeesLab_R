@@ -163,5 +163,6 @@ snippet myGitinstall
 	
 snippet myMemoryReset
 	# clear memory
-	rm(list = ls()[!(ls() %in% c("${1:variable}","${2:variable}","${3:variable}"))])
+	# rm(list = ls()[!(ls() %in% c("${1:variable}","${2:variable}","${3:variable}"))])
+	rm(list = ls())
 	gc()
