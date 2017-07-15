@@ -90,7 +90,7 @@ snippet ts
 snippet myPack
 	# install Kang's basic functions package from the git-hub
 	#------------- Packages ----
-	packages <- c("ggplot2", "dplyr", "readr", "data.table")
+	packages <- c("tidyverse", "data.table")
 	kasa.instPak (packages)
 	#-----------------------------
 	#------------- Bioc_Packages ----
@@ -163,5 +163,6 @@ snippet myGitinstall
 	
 snippet myMemoryReset
 	# clear memory
-	rm(list = ls()[!(ls() %in% c("${1:variable}","${2:variable}","${3:variable}"))])
+	# rm(list = ls()[!(ls() %in% c("${1:variable}","${2:variable}","${3:variable}"))])
+	rm(list = ls())
 	gc()
