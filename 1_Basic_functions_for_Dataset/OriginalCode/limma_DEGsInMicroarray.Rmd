@@ -9,19 +9,21 @@ output: html_document
 
 [limma manual](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwiUp7mttIXVAhVBRSYKHaRoAUcQFggsMAA&url=https%3A%2F%2Fwww.bioconductor.org%2Fpackages%2Fdevel%2Fbioc%2Fvignettes%2Flimma%2Finst%2Fdoc%2Fusersguide.pdf&usg=AFQjCNFggt-c5jOD204buU7cLAwVAy_SJg)
 
-
+If you want to deal with RNA-seq data(RPKM or FPKM), it woud be better to use limma-trend (fit <- eBayes(fit, trend=TRUE))   
+[source](https://support.bioconductor.org/p/56275/)
 
 ```{r}
 #===================================================================
 # Properties: user input
 #-------------------------------------------------------------------
-print("Microarray data matrix..............")
+print("Microarray data matrix or normalized RNA-seq data..............")
 in.file.matrix <- file.choose()
 print("group data containing two columns,'sample' and 'group'.......")
 in.file.group <- file.choose()
 
 
 reference_group <- "A"
+Is_this_RNA_seq <- FALSE # If TRUE, conduct limma-trend
 
 #===================================================================
 
@@ -75,7 +77,10 @@ fac <- groupData.matrix$group.m
 design.k=model.matrix(~ fac)
 
 fit <- lmFit(data.ExpressionSet, design=design.k)
-fit <- eBayes(fit)
+if (Is_this_RNA_seq) {
+  fit <- eBayes(fit, trend=TRUE) # Limma-trend
+} else {fit <- eBayes(fit)}
+
 limma.result <- topTable(fit, coef=2, number=Inf, sort.by="none")
 
 
