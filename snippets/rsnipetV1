@@ -166,3 +166,5 @@ snippet myMemoryReset
 	# rm(list = ls()[!(ls() %in% c("${1:variable}","${2:variable}","${3:variable}"))])
 	rm(list = ls())
 	gc()
+snippet myGGPLOT2
+	ggplot(k,aes(x=mpg,y=cyl))+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
