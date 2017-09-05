@@ -1,0 +1,49 @@
+---
+title: "DAIVID_KEGG_graph"
+output: html_document
+---
+
+```{r}
+# clear memory
+# rm(list = ls()[!(ls() %in% c("variable","variable","variable"))])
+rm(list = ls())
+gc()
+
+# install Kang's basic functions package from the git-hub
+if ("devtools" %in% installed.packages()[, "Package"]){cat("devtools is installed")}else(install.packages("devtools"))
+
+devtools::install_github("kasaha1/kasaBasicFunctions")
+library(kasaBasicFunctions)
+
+# install Kang's basic functions package from the git-hub
+#------------- Packages ----
+packages <- c("tidyverse", "data.table")
+kasa.instPak (packages)
+#-----------------------------
+#------------- Bioc_Packages ----
+# packages_bioc <- c()
+# kasa.instPak_bioc (packages_bioc)
+#-----------------------------
+
+# High expression
+
+data.raw <- fread("D:/Dropbox/oncologyLab/ALOX15/2_DAIVID/highExpression.txt") %>% as.data.frame() # high expression file
+data.raw$score <- -log2(data.raw$PValue)
+
+pathway_level <- data.raw$Term
+data.raw$Term <- factor(data.raw$Term, levels=pathway_level)
+
+ggplot(data = data.raw,aes(x=Term,y=score))+geom_bar(stat = "identity",aes(fill =  data.raw$Count)) + theme(axis.text.x = element_text(angle = 90, hjust = 1))+scale_fill_gradient2(high=c("#FF4040"), guide = "colourbar")+geom_hline(yintercept = -log2(0.05),linetype="dashed", color = c("#EEAD0E"))
+
+
+# low expression
+
+data.raw <- fread("lowExpression.csv") %>% as.data.frame() # low expression file
+data.raw$score <- -log2(data.raw$PValue)
+
+pathway_level <- data.raw$Term
+data.raw$Term <- factor(data.raw$term, levels=pathway_level)
+
+ggplot(data = data.raw,aes(x=Term,y=score))+geom_bar(stat = "identity",aes(fill =  data.raw$Count)) + theme(axis.text.x = element_text(angle = 90, hjust = 1))+scale_fill_gradient2(high=c("#1E90FF"), guide = "colourbar")+geom_hline(yintercept = -log2(0.05),linetype="dashed", color = c("#EEAD0E"))
+```
+
