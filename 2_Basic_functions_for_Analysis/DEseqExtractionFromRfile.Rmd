@@ -1,14 +1,11 @@
 ---
 title: "R Notebook"
-output: html_notebook
----
----
-title: "R Notebook"
-output: html_notebook
+
 ---
 
-# preparing
 ```{r}
+# preparing
+
 # clear memory
 # rm(list = ls()[!(ls() %in% c("variable","variable","variable"))])
 rm(list = ls())
@@ -29,17 +26,17 @@ kasa.instPak (packages)
 packages_bioc <- c("SummarizedExperiment","DESeq2")
 kasa.instPak_bioc (packages_bioc)
 #-----------------------------
-```
+
 
 ## load data
-```{r}
+
 setwd("C:/Users/SKang2/Downloads/OhYoung/")
 load("C:/Users/SKang2/Downloads/OhYoung/CountMatrix.Robj")
 
-```
+
 
 # dataset extraction
-```{r}
+
 # count matrix
 count.matrix <- assays(se)$count %>% as.data.frame() 
 count.matrix.1 <- rownames_to_column(count.matrix)
@@ -48,10 +45,10 @@ write_csv(count.matrix.1,"count.matrix.csv")
 # group data
 group.data <- colData(se) %>% as.data.frame()
 write_csv(group.data,"group.data.csv")
-```
+
 
 # DESeq2
-```{r}
+
 dataMatrix <- count.matrix.1[-c(1,4,5)] %>% as.matrix()
 rownames(dataMatrix) <- count.matrix.1[1] %>% t %>% as.vector()
 
@@ -63,9 +60,7 @@ colnames(groupData.matrix) <- "group"
 
 groupData.matrix$group <- groupData.matrix$group %>% as.factor()
 rownames(groupData.matrix) <- group.data[1] %>% t %>% as.vector()
-```
 
-```{r}
 
 dir     <- "C:/Users/SKang2/Downloads/OhYoung/"
 dirOut <- paste0(dir,"/output_DESeq2")
