@@ -1,0 +1,124 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# preparing
+```{r}
+# clear memory
+# rm(list = ls()[!(ls() %in% c("variable","variable","variable"))])
+rm(list = ls())
+gc()
+
+# install Kang's basic functions package from the git-hub
+if ("devtools" %in% installed.packages()[, "Package"]){cat("devtools is installed")}else(install.packages("devtools"))
+
+devtools::install_github("kasaha1/kasaBasicFunctions")
+library(kasaBasicFunctions)
+
+# install Kang's basic functions package from the git-hub
+#------------- Packages ----
+packages <- c("tidyverse", "data.table","pheatmap")
+kasa.instPak (packages)
+#-----------------------------
+#------------- Bioc_Packages ----
+packages_bioc <- c("SummarizedExperiment","DESeq2")
+kasa.instPak_bioc (packages_bioc)
+#-----------------------------
+```
+
+## load data
+```{r}
+setwd("C:/Users/SKang2/Downloads/OhYoung/")
+load("C:/Users/SKang2/Downloads/OhYoung/CountMatrix.Robj")
+
+```
+
+# dataset extraction
+```{r}
+# count matrix
+count.matrix <- assays(se)$count %>% as.data.frame() 
+count.matrix.1 <- rownames_to_column(count.matrix)
+write_csv(count.matrix.1,"count.matrix.csv")
+
+# group data
+group.data <- colData(se) %>% as.data.frame()
+write_csv(group.data,"group.data.csv")
+```
+
+# DESeq2
+```{r}
+dataMatrix <- count.matrix.1[-c(1,4,5)] %>% as.matrix()
+rownames(dataMatrix) <- count.matrix.1[1] %>% t %>% as.vector()
+
+
+group.data <- group.data %>% filter(Status != "treated2")
+groupData.matrix <- group.data[-1]
+colnames(groupData.matrix) <- "group"
+
+
+groupData.matrix$group <- groupData.matrix$group %>% as.factor()
+rownames(groupData.matrix) <- group.data[1] %>% t %>% as.vector()
+```
+
+```{r}
+
+dir     <- "C:/Users/SKang2/Downloads/OhYoung/"
+dirOut <- paste0(dir,"/output_DESeq2")
+if(!file.exists(dirOut)){  dir.create(dirOut)} # Creat output data
+
+reference_group <- "control"
+
+# dds processing
+dds <- DESeqDataSetFromMatrix(countData = dataMatrix,colData = groupData.matrix,design = ~group)
+dds$group <- relevel(dds$group, ref=reference_group)
+dds <- DESeq(dds)
+
+
+res <- results(dds)
+resLFC <- lfcShrink(dds, coef=2, res=res)
+
+res.table <- as.data.frame(res)
+res.LFC.table <- as.data.frame(resLFC)
+normalizedTable <- log2(counts(dds,normalized=TRUE)+1)
+
+res.merged <- cbind(res.table,res.LFC.table$log2FoldChange,normalizedTable)
+res.merged <- rownames_to_column(res.merged)
+colnames(res.merged)[c(1,8)] <- c("gene","lfcShrink")
+write_csv(res.merged,paste0(dirOut,"/DE_reference_",reference_group,".csv"),na = "")
+
+# DESeq2 output plot
+png(paste0(dirOut,"/DESeq2_preLFCshinkage.png"),width = 700, height = 500,pointsize = 12, bg = "white")
+  plotMA(res)
+dev.off()
+png(paste0(dirOut,"/DESeq2_LFCshinkage.png"),width = 700, height = 500,pointsize = 12, bg = "white")
+plotMA(resLFC)
+dev.off()
+
+# Regularized log transformation nomalizaton
+rld <- rlog(dds, blind=FALSE)
+rld.table <- assay(rld)
+write_csv(rownames_to_column(as.data.frame(rld.table)),paste0(dirOut,"/Regularized_log_transformation.csv"))
+
+# variance stabilizing transformations (VST)
+vsd <- varianceStabilizingTransformation(dds, blind=FALSE)
+vsd.table <- assay(vsd)
+write_csv(rownames_to_column(as.data.frame(vsd.table)),paste0(dirOut,"/variance_stabilizing_transformation.csv"))
+
+png(paste0(dirOut,"/normalization.png"),width = 1000, height = 700,pointsize = 12, bg = "white")
+par(mfrow=c(4,1))
+boxplot(dataMatrix,main="Raw data")
+boxplot(normalizedTable,main = "DESeq2 normalization")
+boxplot(rld.table,main = "Regularized log transformation")
+boxplot(vsd.table,main = "Variance stabilizing transformation")
+par(mfrow=c(1,1))
+dev.off()
+
+
+```
+
+
