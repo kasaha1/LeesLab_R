@@ -42,7 +42,7 @@ data.raw <- fread("lowExpression.csv") %>% as.data.frame() # low expression file
 data.raw$score <- -log2(data.raw$PValue)
 
 pathway_level <- data.raw$Term
-data.raw$Term <- factor(data.raw$term, levels=pathway_level)
+data.raw$Term <- factor(data.raw$Term, levels=pathway_level)
 
 ggplot(data = data.raw,aes(x=Term,y=score))+geom_bar(stat = "identity",aes(fill =  data.raw$Count)) + theme(axis.text.x = element_text(angle = 90, hjust = 1))+scale_fill_gradient2(high=c("#1E90FF"), guide = "colourbar")+geom_hline(yintercept = -log2(0.05),linetype="dashed", color = c("#EEAD0E"))
 ```
