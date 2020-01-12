@@ -122,7 +122,7 @@ return(cbind(x[1],median_centered))
 # Gene filtering
 
 geneFilterBySD <- function(x, sdValue =2){
-  raw.data <- as.matrix(x[-1])
+  raw.data <- as.matrix(x[,-1])
   sd.filter <- apply(raw.data,1,sd)
   sd_merged <- cbind(sd.filter,x) %>% filter(sd.filter>sdValue)
   print(paste(nrow(sd_merged),"passed out of",nrow(x),"-- FilterBySD"))
@@ -131,7 +131,7 @@ geneFilterBySD <- function(x, sdValue =2){
 
 
 geneFilterByABS <- function(x, AtLeastObservation=1, absVal=2){
-  raw.data <- as.matrix(x[-1])
+  raw.data <- as.matrix(x[,-1])
   y <- abs(raw.data) %>% apply(c(1,2),function(k){ifelse(k>absVal,TRUE,FALSE)}) %>%  apply(1,sum)
   y_1 <- ifelse(y>=AtLeastObservation,TRUE,FALSE)
   print(paste(nrow(x[y_1,]),"passed out of",nrow(x),"-- FilterByABS"))
