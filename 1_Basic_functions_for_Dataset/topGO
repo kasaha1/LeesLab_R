@@ -1,0 +1,47 @@
+# install Kang's basic functions package from the git-hub
+if ("devtools" %in% installed.packages()[, "Package"]){cat("devtools is installed")}else(install.packages("devtools"))
+
+devtools::install_github("kasaha1/kasaBasicFunctions")
+library(kasaBasicFunctions)
+
+# install Kang's basic functions package from the git-hub
+#------------- Packages ----
+packages <- c("tidyverse", "data.table")
+kasa.instPak (packages)
+#-----------------------------
+#------------- Bioc_Packages ----
+packages_bioc <- c("topGo")
+kasa.instPak_bioc (packages_bioc)
+#-----------------------------
+BiocManager::install("topGo")
+BiocManager::install("org.Mm.eg.db")
+
+
+topDiffGenes <- function(allScore) {
+   return(allScore < 0.01)
+   }
+
+genesList <- fread("C:/Users/kangs/Desktop/새 폴더/WTelevated_pval.txt") %>% data.frame()
+
+# kk <- genesList$Pval %>% t %>% as.vector()
+kk <- genesList$Pvalue %>% t %>% as.vector()
+names(kk) <- genesList$NAME %>% t %>% as.vector()
+
+# sampleGOdata <- new("topGOdata", description = "whatevs",ontology = "BP", allGenes = kk, geneSel = function(x)x, nodeSize = 5, annot = annFUN.org, ID = "alias", mapping = "org.Mm.eg.db")
+sampleGOdata <- new("topGOdata", description = "whatevs",ontology = "BP", allGenes = kk, geneSel = topDiffGenes, nodeSize = 5, annot = annFUN.org, ID = "alias", mapping = "org.Mm.eg.db")
+
+
+resultFisher <- runTest(sampleGOdata, algorithm = "classic", statistic = "fisher")
+resultKS <- runTest(sampleGOdata, algorithm = "classic", statistic = "ks")
+resultKS.elim <- runTest(sampleGOdata, algorithm = "elim", statistic = "ks")
+
+allRes <- GenTable(sampleGOdata, classicFisher = resultFisher,
+                   classicKS = resultKS, elimKS = resultKS.elim,
+                   orderBy = "elimKS", ranksOf = "classicFisher",topNodes =10,numChar = 100)
+
+# anot gene add to table
+allGO <- genesInTerm(sampleGOdata)
+allRes$geneMember <- "geneList"
+for (j in c(1:nrow(allRes))) {
+  allRes[j,10] <- paste(allGO[allRes[j,1]] %>% unlist(),collapse = ",")
+}    
