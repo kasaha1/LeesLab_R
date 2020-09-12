@@ -98,7 +98,7 @@ return(res)
 
 
 #------------- Packages ----
-packages <- c("ggplot2", "dplyr", "reshape2","moonBook", "readr","colorspace","pca3d","magick")
+packages <- c("tidyverse","readr","colorspace","pca3d","magick")
 instPak (packages) 
 #-----------------------------
 
@@ -132,7 +132,7 @@ data.group$group <- as.factor(data.group$group)
 
 pca <- prcomp( data.PCA[,-1], scale.= TRUE )
 pca3d( pca, group= data.group[,2],
-fancy= F, bg= "white",
+fancy= F, bg= "white", radius = 3,
 axes.color= "dimgray", new= T,show.group.labels=T
 ,legend = c("bottomleft")
 # ,palette = c("#00AFEF","#00A859","#C8C5E2","#F5874F","#A8518A","#ED3237")
