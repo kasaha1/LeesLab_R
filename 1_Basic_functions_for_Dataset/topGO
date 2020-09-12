@@ -1,3 +1,8 @@
+# clear memory
+# rm(list = ls()[!(ls() %in% c("variable","variable","variable"))])
+rm(list = ls())
+gc()
+
 # install Kang's basic functions package from the git-hub
 if ("devtools" %in% installed.packages()[, "Package"]){cat("devtools is installed")}else(install.packages("devtools"))
 
@@ -10,25 +15,27 @@ packages <- c("tidyverse", "data.table")
 kasa.instPak (packages)
 #-----------------------------
 #------------- Bioc_Packages ----
-packages_bioc <- c("topGo")
+packages_bioc <- c("topGO","org.Mm.eg.db")
 kasa.instPak_bioc (packages_bioc)
 #-----------------------------
-BiocManager::install("topGo")
-BiocManager::install("org.Mm.eg.db")
 
+setwd("D:/GoogleDrive_KR/A_Task/goterm_LimSunyung/topGo")
 
 topDiffGenes <- function(allScore) {
-   return(allScore < 0.01)
-   }
+  return(allScore < 0.01)
+}
 
-genesList <- fread("C:/Users/kangs/Desktop/새 폴더/WTelevated_pval.txt") %>% data.frame()
 
+
+genesList <- fread("WTdepressed_pval.txt") %>% data.frame()
 # kk <- genesList$Pval %>% t %>% as.vector()
 kk <- genesList$Pvalue %>% t %>% as.vector()
 names(kk) <- genesList$NAME %>% t %>% as.vector()
 
-# sampleGOdata <- new("topGOdata", description = "whatevs",ontology = "BP", allGenes = kk, geneSel = function(x)x, nodeSize = 5, annot = annFUN.org, ID = "alias", mapping = "org.Mm.eg.db")
-sampleGOdata <- new("topGOdata", description = "whatevs",ontology = "BP", allGenes = kk, geneSel = topDiffGenes, nodeSize = 5, annot = annFUN.org, ID = "alias", mapping = "org.Mm.eg.db")
+##---------- WT depre BP
+
+sampleGOdata <- new("topGOdata", description = "whatevs",ontology = "BP", allGenes = kk, geneSel = function(x)x, nodeSize = 5, annot = annFUN.org, ID = "alias", mapping = "org.Mm.eg.db")
+# sampleGOdata <- new("topGOdata", description = "whatevs",ontology = "BP", allGenes = kk, geneSel = topDiffGenes, nodeSize = 5, annot = annFUN.org, ID = "alias", mapping = "org.Mm.eg.db")
 
 
 resultFisher <- runTest(sampleGOdata, algorithm = "classic", statistic = "fisher")
@@ -42,6 +49,75 @@ allRes <- GenTable(sampleGOdata, classicFisher = resultFisher,
 # anot gene add to table
 allGO <- genesInTerm(sampleGOdata)
 allRes$geneMember <- "geneList"
+
 for (j in c(1:nrow(allRes))) {
   allRes[j,10] <- paste(allGO[allRes[j,1]] %>% unlist(),collapse = ",")
 }    
+
+allRes$type <- "BP"
+write_csv(allRes,"mouse_result/WTdepreBP.csv")
+
+##---------- WT elev MF
+
+sampleGOdata <- new("topGOdata", description = "whatevs",ontology = "MF", allGenes = kk, geneSel = function(x)x, nodeSize = 5, annot = annFUN.org, ID = "alias", mapping = "org.Mm.eg.db")
+# sampleGOdata <- new("topGOdata", description = "whatevs",ontology = "BP", allGenes = kk, geneSel = topDiffGenes, nodeSize = 5, annot = annFUN.org, ID = "alias", mapping = "org.Mm.eg.db")
+
+
+resultFisher <- runTest(sampleGOdata, algorithm = "classic", statistic = "fisher")
+resultKS <- runTest(sampleGOdata, algorithm = "classic", statistic = "ks")
+resultKS.elim <- runTest(sampleGOdata, algorithm = "elim", statistic = "ks")
+
+allRes <- GenTable(sampleGOdata, classicFisher = resultFisher,
+                   classicKS = resultKS, elimKS = resultKS.elim,
+                   orderBy = "elimKS", ranksOf = "classicFisher",topNodes =10,numChar = 100)
+
+# anot gene add to table
+allGO <- genesInTerm(sampleGOdata)
+allRes$geneMember <- "geneList"
+
+for (j in c(1:nrow(allRes))) {
+  allRes[j,10] <- paste(allGO[allRes[j,1]] %>% unlist(),collapse = ",")
+}    
+
+allRes$type <- "MF"
+write_csv(allRes,"mouse_result/WTdepreMF.csv")
+
+
+##---------- WT elev CC
+
+sampleGOdata <- new("topGOdata", description = "whatevs",ontology = "CC", allGenes = kk, geneSel = function(x)x, nodeSize = 5, annot = annFUN.org, ID = "alias", mapping = "org.Mm.eg.db")
+# sampleGOdata <- new("topGOdata", description = "whatevs",ontology = "BP", allGenes = kk, geneSel = topDiffGenes, nodeSize = 5, annot = annFUN.org, ID = "alias", mapping = "org.Mm.eg.db")
+
+
+resultFisher <- runTest(sampleGOdata, algorithm = "classic", statistic = "fisher")
+resultKS <- runTest(sampleGOdata, algorithm = "classic", statistic = "ks")
+resultKS.elim <- runTest(sampleGOdata, algorithm = "elim", statistic = "ks")
+
+allRes <- GenTable(sampleGOdata, classicFisher = resultFisher,
+                   classicKS = resultKS, elimKS = resultKS.elim,
+                   orderBy = "elimKS", ranksOf = "classicFisher",topNodes =10,numChar = 100)
+
+# anot gene add to table
+allGO <- genesInTerm(sampleGOdata)
+allRes$geneMember <- "geneList"
+
+for (j in c(1:nrow(allRes))) {
+  allRes[j,10] <- paste(allGO[allRes[j,1]] %>% unlist(),collapse = ",")
+}    
+
+allRes$type <- "CC"
+write_csv(allRes,"mouse_result/WTdepreCC.csv")
+
+
+# graph ---------------
+
+dataRaw <- fread("mouseDown.txt") %>% as.data.frame()
+
+ggplot(dataRaw, aes(x=reorder(Term,EnrichScore), y=EnrichScore, fill=type)) + 
+       geom_bar(stat="identity") +coord_flip() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+cairo_pdf("mouseDown.pdf",width = 15, height = 10,pointsize = 12)
+ ggplot(dataRaw, aes(x=reorder(Term,EnrichScore), y=EnrichScore, fill=type)) + 
+       geom_bar(stat="identity") +coord_flip() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+dev.off()
