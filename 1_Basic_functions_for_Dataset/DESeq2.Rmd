@@ -22,6 +22,17 @@ The group data must consist of two columns. The first line should contain the sa
 Finally, specify the group to be the reference (denominator) in the code.  
 
 ```{r}
+library(kasaBasicFunctions)
+# install Kang's basic functions package from the git-hub
+#------------- Packages ----
+packages <- c("tidyverse", "data.table")
+kasa.instPak (packages)
+#-----------------------------
+#------------- Bioc_Packages ----
+packages_bioc <- c("DESeq2","apeglm")
+kasa.instPak_bioc (packages_bioc)
+#-----------------------------
+
 #===================================================================
 # Properties: user input
 #-------------------------------------------------------------------
@@ -39,16 +50,7 @@ dir     <- dirname(in.file.matrix)
 dirOut <- paste0(dir,"/output_DESeq2")
 if(!file.exists(dirOut)){  dir.create(dirOut)} # Creat output data
 
-library(kasaBasicFunctions)
-# install Kang's basic functions package from the git-hub
-#------------- Packages ----
-packages <- c("tidyverse", "data.table")
-kasa.instPak (packages)
-#-----------------------------
-#------------- Bioc_Packages ----
-packages_bioc <- c("DESeq2","apeglm")
-kasa.instPak_bioc (packages_bioc)
-#-----------------------------
+
 
 
 data.raw <- fread(in.file.matrix) %>% as.data.frame()
