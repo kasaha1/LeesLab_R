@@ -1,0 +1,101 @@
+library(kasaBasicFunctions)
+
+# install Kang's basic functions package from the git-hub
+#------------- Packages ----
+packages <- c("tidyverse", "data.table")
+kasa.instPak (packages)
+#-----------------------------
+#------------- Bioc_Packages ----
+packages_bioc <- c("pamr","impute")
+kasa.instPak_bioc (packages_bioc)
+#-----------------------------
+
+if(!file.exists("Output"))dir.create("Output")
+
+# Dataset Load ----
+
+trainingGeneMatrix <- fread("dataset/trainingMatrix.txt") %>% as.data.frame()
+trainingClass <- fread("Dataset/trainingClass.txt") %>% as.data.frame()
+trainingGenenames <- fread("Dataset/geneNames.txt") %>% as.data.frame()
+
+# Dataset preparing ----
+## check missing value of matrix
+# kasa.dataCleaning(trainingGeneMatrix) # clear
+## missing value is imputed using nearest neighbor averaging
+trainingX <- trainingGeneMatrix %>% data.matrix() %>% impute.knn()
+trainingX <- trainingX$data
+kasa.dataCleaning(as.data.frame(trainingX))
+
+colnames(trainingGenenames)[1] <- "genenames"
+Genenames <- trainingGenenames %>% t %>% as.vector()
+
+## transform 'class name' to numeric vector
+levOfClass <- trainingClass %>% t %>% as.factor() %>% levels()
+levOfClass_numeric <- levOfClass %>% as.factor() %>% as.numeric()
+table.levels <- cbind(levOfClass,levOfClass_numeric) %>% as.data.frame()
+trainingClass.m <- left_join(trainingClass,table.levels, by=c("class"="levOfClass"))
+trainingY <- trainingClass.m$levOfClass_numeric %>% t %>% as.character() %>% as.numeric()
+
+
+## merging dataset for training
+mydata <- list(x=trainingX, y=trainingY, genenames = Genenames, geneid = c(1:length(Genenames)) )
+
+## analysis start : Training ----
+model <- pamr.train(mydata)
+print(model)
+
+
+## analysis start : CrossValidation ----
+
+model.cv <- pamr.cv(fit = model, data = mydata)
+print(model.cv)
+
+
+pdf("Output/CrossValidation_Plot.pdf",width = 15, height = 10,pointsize = 12)
+pamr.plotcv(model.cv)
+dev.off()
+
+## analysis start : Threshold 0
+Delta <- 0
+
+pdf("Output/CrossValidation_Plot_0.pdf",width = 15, height = 10,pointsize = 12)
+pamr.plotcvprob(model, mydata,threshold = Delta)
+dev.off()
+
+## analysis start : centroid
+centroid_gene <- pamr.listgenes(model, mydata, Delta, genenames = TRUE) %>% as.data.frame
+centroid_gene$id <- centroid_gene$id %>% as.numeric()
+centroid_gene <- centroid_gene %>% arrange(id)
+colnames(centroid_gene)[c(3:(2+length(levOfClass)))] <- levOfClass
+write_delim(centroid_gene,file = "Output/centroid_ByGenes.txt",delim = "\t")
+
+## analysis start : prediction
+
+## testDataset preparing
+testDataset <- fread("dataset/testMatrix.txt") %>% as.data.frame() %>% kasa.duplicationRemovalBySD()
+colnames(testDataset)[1] <- c("genenames")
+testDataset.modi <- left_join(x=trainingGenenames,y=testDataset,by=c("genenames"))
+
+kk1 <- testDataset.modi %>% kasa.geneMedianCentering() %>% kasa.geneStandardization()
+sum(is.nan(kk1))
+## testset preparation
+kasa.dataCleaning(testDataset.modi)
+
+# impute missing value
+testX.p <- kk1[-1] %>% data.matrix() %>% impute.knn()
+testX <- testX.p$data
+kasa.dataCleaning(as.data.frame(testX))
+
+
+res.class <- pamr.predict(fit = model,newx = testX,threshold = Delta,type = "class") %>% as.character() %>% as.numeric()
+res.class.t <- levOfClass[res.class]
+
+res.probability <- pamr.predict(fit = model,newx = testX,threshold = Delta,type = "posterior")
+res.probability.m <- res.probability %>% round(digits = 3)
+res.probability.t <- apply(res.probability, 1,max) %>% round(digits = 3)
+
+res.ID <- colnames(testX)
+
+res.table <- cbind(res.ID,res.class.t,res.probability.t,res.probability.m) %>% as.data.frame()
+colnames(res.table) <- c("Sample","Class","posterior","post.A","post.B","post.C","post.D","post.E","post.F")
+write_delim(x = res.table,file = "Output/PredictionResult.txt",delim = "\t")
