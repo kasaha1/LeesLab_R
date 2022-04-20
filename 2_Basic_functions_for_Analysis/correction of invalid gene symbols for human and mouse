@@ -1,0 +1,15 @@
+
+# https://pubmed.ncbi.nlm.nih.gov/33564398/
+
+library(HGNChelper)
+human = c("FN1", "tp53", "UNKNOWNGENE","7-Sep", "9/7", "1-Mar", "Oct4", "4-Oct",
+      "OCT4-PG4", "C19ORF71", "C19orf71")
+checkGeneSymbols(human)
+
+#> Warning in checkGeneSymbols(human): x contains non-approved gene symbols
+#>              x Approved   Suggested.Symbol
+#> 1          FN1     TRUE                FN1
+#> 2         tp53    FALSE               TP53
+#> 3  UNKNOWNGENE    FALSE               <NA>
+#> 4        7-Sep    FALSE            SEPTIN7
+#> 5          9/7    FALSE            SEPTIN7
