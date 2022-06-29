@@ -1,0 +1,62 @@
+# https://www.biostars.org/p/9475520/
+# https://genepattern.github.io/DESeq2/v1/index.html
+
+library(kasaBasicFunctions)
+#------------- Packages ----
+packages <- c("tidyverse", "data.table")
+kasa.instPak (packages)
+#-----------------------------
+packages_bioc <- c("DESeq2","apeglm")
+kasa.instPak_bioc (packages_bioc)
+#-----------------------------
+
+setwd("C:/Users/kangs/Desktop/LeeBJ/analysis")
+
+# data import & reference group defining
+data.raw <- fread("rawdata/dataset.csv") %>% as.data.frame() %>% kasa.duplicationRemovalBySD()
+groupData <- fread("rawdata/clinical.csv") %>% as.data.frame()
+reference_group <- "ctrl"
+
+colnames(groupData) <- c("sample","group")
+colnames(data.raw)[1] <- "gene"
+
+data.raw.t <- data.raw %>% kasa.transposeMatrix()
+tmp <- kasa.matchingRow(groupData,data.raw.t,keycolX = "sample",keycolY ="sample")
+groupData <- tmp$dataframeX
+data.raw <- tmp$dataframeY %>% kasa.transposeMatrix()
+
+dataMatrix <- data.raw[-1] %>% as.matrix()
+rownames(dataMatrix) <- data.raw[1] %>% t %>% as.vector()
+groupData.matrix <- groupData[-1] 
+groupData.matrix$group <- groupData.matrix$group %>% as.factor()
+rownames(groupData.matrix) <- groupData[1] %>% t %>% as.vector()
+
+dds <- DESeqDataSetFromMatrix(countData = dataMatrix,colData = groupData.matrix,design = ~group)
+dds$group <- relevel(dds$group, ref=reference_group)
+dds <- DESeq(dds)
+
+# gct output for GSEA ----
+norm_counts <- counts(dds, normalized = T)
+norm_counts_dataframe <- as.data.frame(norm_counts) %>% rownames_to_column()
+colnames(norm_counts_dataframe)[1] <- "NAME"
+norm_counts_dataframe.t <- norm_counts_dataframe %>% kasa.transposeMatrix()
+norm_counts_dataframe.result <- add_column(norm_counts_dataframe,Description = "na",.after = 1)
+write_delim(x = norm_counts_dataframe.result,file = "forGSEA.gct",delim = "\t")
+
+# for cls ----
+colData <-  groupData.matrix
+pheno.cls <- colData %>% as.data.frame() %>% rownames_to_column()
+pheno.cls$group <- pheno.cls$group %>% as.character()
+cls.dataset <- kasa.matchingRow(dataframeX = norm_counts_dataframe.t,dataframeY = pheno.cls,keycolX = "sample",keycolY = "rowname")
+cls.result <- cls.dataset$dataframeY
+cls_3rd <- cls.result$V2 %>% as.vector()
+cls.count <- cls.dataset$dataframeX
+totalSampleCount <- nrow(cls.count)
+totalClasses <- cls.result$V2 %>% as.factor()
+levelofClasses <- levels(totalClasses) %>% as.character()
+ncol(levelofClasses)
+Line_1st <- paste(totalSampleCount,length(levelofClasses),"1",sep = " ")
+Line_2nd <- paste("#",paste(levelofClasses,collapse=" "),sep = " ")
+Line_3rd <- paste(cls_3rd,collapse = " ")
+txt_line <- c(Line_1st,Line_2nd,Line_3rd)
+write_lines(x = txt_line,file = "forGESApheno.cls")
